@@ -1,0 +1,28 @@
+{
+  "summary": "Aura-Guard Compliance Auditor first-finish smoke pass. Backend /api/ and /api/health return 200 with expected payloads. Frontend Dashboard, Audit, Verification, Tamper Demo, and Report pages all render and function correctly. Tamper flow correctly flips integrity to FAIL with cascading hash-chain failures on DEC-0003; reset restores PASS. All required data-testids present and interactive.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "GET /api/ returns 200 with service=aura-guard-compliance-auditor",
+    "GET /api/health returns 200 with status=healthy",
+    "Dashboard: session-name shows Q1-2026 AI Decision Audit",
+    "KPI cards: total=10, compliant=5, warnings=3, violations=2",
+    "Header EVIDENCE INTEGRITY badge shows PASS initially",
+    "integrity-card shows PASS state",
+    "import-json-input (hidden file input) present",
+    "Audit page: 10 audit-row-<ID> entries render",
+    "View decision opens decision-detail-dialog",
+    "Verification page: 4 check-summary cards, all showing 10/10 records passing",
+    "Verification page: 10 verify-row-<ID> entries",
+    "Tamper Demo: selecting DEC-0003 + field 'reason' + Apply tamper flips header badge to FAIL and shows TAMPERED badge",
+    "Tamper result card shows 'Integrity failure'",
+    "Canonical, SHA-256, and Hash-chain continuity checks all FAIL after tamper (visually verified); Policy check remains PASS",
+    "tamper-reset-btn restores integrity to PASS and removes TAMPERED badge",
+    "Report page renders with title 'Compliance Audit Report', all 5 sections (Executive, Scope, Decision ledger, Evidence verification, Auditor attestation), disclaimer, and print-report-btn"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Test script initially guessed wrong testid keys 'tamper-check-sha256' and 'tamper-check-chain_continuity'; actual keys are 'tamper-check-sha256_integrity' and 'tamper-check-hash_chain_continuity' (per verification.js). This was a test-script issue, not an app bug. Screenshots confirm all 4 tamper checks render with correct PASS/FAIL states. Import JSON actual file upload not exercised (per request); hidden input verified present. Backend uses MONGO_URL/DB_NAME in .env but no auth/DB flows are used by this demo (client-side crypto only)."
+}

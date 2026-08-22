@@ -1,0 +1,115 @@
+{
+  "theme": "dark",
+  "archetype": "The Performance Pro / SOC Enterprise Dark",
+  "typography": {
+    "headings": {
+      "font_family": "IBM Plex Sans, sans-serif",
+      "classes": "font-sans tracking-tight font-semibold",
+      "hierarchy": {
+        "h1": "text-3xl sm:text-4xl lg:text-5xl",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl",
+        "h3": "text-lg sm:text-xl lg:text-2xl",
+        "h4": "text-base sm:text-lg uppercase tracking-[0.2em] text-zinc-400"
+      }
+    },
+    "body": {
+      "font_family": "Inter, sans-serif",
+      "classes": "text-sm sm:text-base leading-relaxed text-zinc-300"
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "classes": "font-mono text-xs sm:text-sm tracking-tight text-zinc-400 bg-zinc-900/50 p-1 rounded-sm"
+    }
+  },
+  "colors": {
+    "background": "#0A0A0A",
+    "surface": "#18181B",
+    "surface_hover": "#27272A",
+    "border": "#27272A",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA",
+    "status": {
+      "pass": { "text": "#10B981", "bg": "rgba(16, 185, 129, 0.1)", "border": "#059669" },
+      "fail": { "text": "#EF4444", "bg": "rgba(239, 68, 68, 0.1)", "border": "#DC2626" },
+      "warning": { "text": "#F59E0B", "bg": "rgba(245, 158, 11, 0.1)", "border": "#D97706" },
+      "info": { "text": "#3B82F6", "bg": "rgba(59, 130, 246, 0.1)", "border": "#2563EB" }
+    }
+  },
+  "visual_enhancers": {
+    "borders": "Use Grid Borders (The Technical Look). Expose the skeleton with 1px subtle borders (border-zinc-800).",
+    "shadows": "Minimal to none. Rely on 1px solid strokes for depth instead of soft shadows. For active states, use 2px 'Inner Glow' highlights.",
+    "glassmorphism": "For sticky headers only: bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800/50. No muddy grays.",
+    "textures": "Subtle noise overlay on the main background to prevent digital flatness."
+  },
+  "components": {
+    "Cards": "Flat background (bg-zinc-900), 1px subtle border (border-zinc-800), rounded-md. Hover: border lightens to border-zinc-600.",
+    "Buttons": "Sharp or slightly rounded (rounded-sm). Primary buttons use high contrast (bg-white text-black hover:bg-zinc-200). Danger actions use red.",
+    "Badges": "Use Shadcn badges but heavily customized with status colors (pass/fail/warning) using transparent bg + 1px colored border + colored text.",
+    "Tables": "Dense layout. Use monospaced font for ID/Hash columns. Sticky header.",
+    "Tabs": "Underline style or sharp pill style. Active state should have high contrast."
+  },
+  "grids": {
+    "dashboard_kpis": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
+    "bento_layout": "grid grid-cols-1 lg:grid-cols-12 gap-6",
+    "data_row": "grid grid-cols-1 md:grid-cols-[1fr_200px_100px] gap-4 items-center"
+  },
+  "layouts": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full",
+    "section_spacing": "py-8 sm:py-12",
+    "element_spacing": "gap-4 sm:gap-6",
+    "navigation": "Sticky top-0 z-50 flex items-center justify-between h-16"
+  },
+  "responsive": {
+    "breakpoint": "mobile-first",
+    "layout": "Stack elements vertically on mobile. Use hidden/block classes to swap complex tables for card-based lists on screens < 768px.",
+    "typography": "Scale down h1 to text-3xl on mobile. Ensure body copy is at least 16px to prevent iOS zoom.",
+    "overflow_guard": "Use overflow-x-auto on tables or pre/code blocks. Ensure main container has overflow-x-hidden.",
+    "tap_targets": "Ensure all interactive elements (buttons, links, table rows) have a minimum height of 44px on mobile."
+  },
+  "motion": {
+    "transitions": "Use specific properties: transition-colors duration-200, transition-transform duration-200. NO transition-all.",
+    "interactions": "Buttons scale down slightly on active: active:scale-95. Rows have subtle bg change on hover.",
+    "feedback": "Use Framer Motion for Tamper Demonstration: when a field is tampered, the hash string should visually 'scramble' or flash red (bg-red-500/20) to draw attention."
+  },
+  "accessibility": {
+    "contrast": "Ensure all text against dark backgrounds meets APCA/WCAG AA minimums (pure white or zinc-300 on zinc-950).",
+    "focus": "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
+    "aria": "Use aria-live regions for the Tamper Demonstration results (Pass/Fail)."
+  },
+  "media": {
+    "strategy": "Minimal images. This is an enterprise console. Rely on typography, grid lines, and data visualization.",
+    "icons": "Use Phosphor Icons (@phosphor-icons/react) for a technical, crisp look. Duotone or Regular weight."
+  },
+  "3d_libraries": {
+    "strategy": "No complex 3D required for this MVP to keep it fast. If a visual is needed for the 'Hash Chain Continuity', use D3.js or a simple HTML/CSS flex layout with arrows (Phosphor icons) connecting blocks."
+  },
+  "image_urls": [
+    {
+      "url": "https://images.pexels.com/photos/10653941/pexels-photo-10653941.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "category": "Hero/Header Texture",
+      "description": "Optional: Extremely low opacity (5%) background texture for the main header to add a subtle tech/data vibe."
+    }
+  ],
+  "instructions_to_main_agent": [
+    "1. Setup Context: Build a React web app with Tailwind CSS and Shadcn UI. The app is an 'Aura-Guard Compliance Auditor'.",
+    "2. Data Mocking: Implement a built-in JSON sample dataset with deterministic demo data. DO NOT make external API calls.",
+    "3. Dashboard View: Create KPI cards (total, compliant, warnings, violations). Use Grid layout.",
+    "4. Audit View: A list/table of AI decisions. Include policy status, reason, timestamp, and short evidence hash.",
+    "5. Evidence Verification View: A detailed split-view or modal. Show checks for canonical representation, SHA-256 integrity, hash-chain, and policy version. Clearly indicate PASS/FAIL states using the defined status colors.",
+    "6. Tamper Flow (CRITICAL): Build an interactive demo. Allow the user to edit a field in the JSON payload on the UI. Upon editing, immediately trigger a re-validation that causes the SHA-256 integrity check to FAIL (turn red).",
+    "7. Report View: A clean, printable summary view of the audit session. Hide navigation and dark theme strictly for printing if possible, or keep it monochrome.",
+    "8. Mobile First: The dashboard MUST be usable on mobile. Convert the audit table into a vertical stack of cards on small screens (md:hidden for table, hidden md:block for cards).",
+    "9. Test IDs: MUST add data-testid attributes to all buttons, inputs, and major UI containers (e.g., data-testid='upload-json-btn', data-testid='tamper-input').",
+    "10. Dependencies: Install @phosphor-icons/react for icons. Use sonner for toasts.",
+    "11. Styling: Ensure NO transparent backgrounds on headers. Use bg-zinc-950/80 with backdrop-blur. Avoid overusing soft shadows; rely on 1px borders."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "DO NOT use universal transition (transition: all). Use specific transitions.",
+    "DO NOT center align the app container (.App { text-align: center; }).",
+    "NEVER use emojis as icons. Use the specified icon library.",
+    "Create depth through z-index and border styling, not heavy shadows (in this dark theme).",
+    "Prioritize existing Shadcn components in /app/frontend/src/components/ui.",
+    "Ensure hover states and focus rings are distinct and accessible.",
+    "Use 2-3x more spacing for layouts to avoid cramped designs, but keep data tables dense."
+  ]
+}

@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    color-scheme: dark;
+}
+
+html, body, #root {
+    background-color: #0A0A0A;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #E4E4E7;
+}
+
+.font-display {
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+}
+
+.font-mono, code, pre {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+    :root {
+        --background: 0 0% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 240 4% 10%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 5% 8%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 0 0% 9%;
+        --secondary: 240 4% 15%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 4% 15%;
+        --muted-foreground: 240 5% 65%;
+        --accent: 240 4% 15%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 4% 16%;
+        --input: 240 4% 16%;
+        --ring: 0 0% 83.1%;
+        --radius: 0.375rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+/* Subtle noise / grain overlay for the surface layer */
+.grain-overlay::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 3px 3px;
+    z-index: 0;
+    mix-blend-mode: overlay;
+}
+
+/* Print stylesheet for the compliance audit report */
+@media print {
+    body, html, #root {
+        background: #ffffff !important;
+        color: #0A0A0A !important;
+    }
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    .print-page {
+        background: #ffffff !important;
+        color: #0A0A0A !important;
+    }
+    .print-page * {
+        color: #0A0A0A !important;
+        border-color: #d4d4d8 !important;
+        background: transparent !important;
+    }
+    .print-badge-pass { color: #047857 !important; border-color: #10B981 !important; }
+    .print-badge-fail { color: #B91C1C !important; border-color: #EF4444 !important; }
+    .print-badge-warn { color: #B45309 !important; border-color: #F59E0B !important; }
+    .page-break { page-break-before: always; }
+}
+
+.print-only { display: none; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #0A0A0A; }
+::-webkit-scrollbar-thumb { background: #27272A; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3F3F46; }
