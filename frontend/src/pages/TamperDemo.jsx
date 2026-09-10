@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { PassFailBadge } from "@/components/StatusBadge";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { humanize, DASH } from "@/lib/format";
 
 const TAMPERABLE_FIELDS = [
     { key: "reason", label: "reason" },
@@ -97,7 +98,7 @@ export default function TamperDemo() {
                                 <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
                                     {decisions.map((d) => (
                                         <SelectItem key={d.id} value={d.id} className="font-mono text-xs">
-                                            {d.id} · {d.action.replace(/_/g, " ")}
+                                            {d.id} · {humanize(d.action)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -201,12 +202,25 @@ export default function TamperDemo() {
                         {decision && (
                             <div className="pt-2">
                                 <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-2">
-                                    Stored evidence
+                                    Stored vs re-derived (independent recomputation)
                                 </div>
-                                <div className="rounded-sm border border-zinc-800 bg-zinc-950 p-3 font-mono text-[10px] leading-relaxed text-zinc-300 space-y-1">
-                                    <div><span className="text-zinc-500">canonical_hash:</span> <span className="break-all">{decision.evidence.canonical_hash}</span></div>
-                                    <div><span className="text-zinc-500">recomputed:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> <span className={`break-all ${result?.checks.sha256_integrity.pass ? "text-emerald-400" : "text-red-400"}`}>{result?.recomputedHash}</span></div>
-                                    <div><span className="text-zinc-500">chain_hash:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> <span className="break-all">{decision.evidence.chain_hash}</span></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div className="rounded-sm border border-zinc-800 bg-zinc-950 p-3">
+                                        <div className="text-[9px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-1">Stored canonical_hash</div>
+                                        <div className="font-mono text-[10px] text-zinc-300 break-all" data-testid="stored-canonical-hash">{decision.evidence?.canonical_hash || DASH}</div>
+                                    </div>
+                                    <div className={`rounded-sm border p-3 ${result?.checks.sha256_integrity.pass ? "border-emerald-800/60 bg-emerald-500/[0.05]" : "border-red-800/60 bg-red-500/[0.05]"}`}>
+                                        <div className="text-[9px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-1">Re-derived canonical_hash</div>
+                                        <div className={`font-mono text-[10px] break-all ${result?.checks.sha256_integrity.pass ? "text-emerald-300" : "text-red-300"}`} data-testid="recomputed-canonical-hash">{result?.recomputedHash || DASH}</div>
+                                    </div>
+                                    <div className="rounded-sm border border-zinc-800 bg-zinc-950 p-3">
+                                        <div className="text-[9px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-1">Stored chain_hash</div>
+                                        <div className="font-mono text-[10px] text-zinc-300 break-all">{decision.evidence?.chain_hash || DASH}</div>
+                                    </div>
+                                    <div className={`rounded-sm border p-3 ${result?.checks.hash_chain_continuity.pass ? "border-emerald-800/60 bg-emerald-500/[0.05]" : "border-red-800/60 bg-red-500/[0.05]"}`}>
+                                        <div className="text-[9px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-1">Re-derived chain_hash</div>
+                                        <div className={`font-mono text-[10px] break-all ${result?.checks.hash_chain_continuity.pass ? "text-emerald-300" : "text-red-300"}`}>{result?.recomputedChain || DASH}</div>
+                                    </div>
                                 </div>
                             </div>
                         )}

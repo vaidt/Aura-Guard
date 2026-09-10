@@ -5,22 +5,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
+import { humanize, truncHash, DASH } from "@/lib/format";
 
 function DecisionDetail({ decision }) {
     if (!decision) return null;
     return (
         <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-3">
-                <Field label="Decision ID" value={decision.id} mono />
-                <Field label="Timestamp" value={decision.timestamp} mono />
-                <Field label="Model" value={decision.model} mono />
-                <Field label="Policy version" value={decision.policy_version} mono />
-                <Field label="Subject" value={decision.subject} mono />
-                <Field label="Action" value={decision.action} />
+                <Field label="Decision ID" value={decision.id || DASH} mono />
+                <Field label="Timestamp" value={decision.timestamp || DASH} mono />
+                <Field label="Model" value={decision.model || DASH} mono />
+                <Field label="Policy version" value={decision.policy_version || DASH} mono />
+                <Field label="Subject" value={decision.subject || DASH} mono />
+                <Field label="Action" value={decision.action || DASH} />
             </div>
             <div>
                 <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-1">Reason</div>
-                <div className="text-zinc-200">{decision.reason}</div>
+                <div className="text-zinc-200">{decision.reason || DASH}</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Block title="Input" data={decision.input} />
@@ -29,9 +30,9 @@ function DecisionDetail({ decision }) {
             <div>
                 <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-1">Evidence</div>
                 <div className="rounded-sm border border-zinc-800 bg-zinc-950 p-3 font-mono text-[11px] leading-relaxed text-zinc-300 space-y-1">
-                    <div><span className="text-zinc-500">canonical_hash:</span> <span className="break-all">{decision.evidence.canonical_hash}</span></div>
-                    <div><span className="text-zinc-500">prev_hash:&nbsp;&nbsp;&nbsp;&nbsp;</span> <span className="break-all">{decision.evidence.prev_hash}</span></div>
-                    <div><span className="text-zinc-500">chain_hash:&nbsp;&nbsp;&nbsp;</span> <span className="break-all">{decision.evidence.chain_hash}</span></div>
+                    <div><span className="text-zinc-500">canonical_hash:</span> <span className="break-all">{decision.evidence?.canonical_hash || DASH}</span></div>
+                    <div><span className="text-zinc-500">prev_hash:&nbsp;&nbsp;&nbsp;&nbsp;</span> <span className="break-all">{decision.evidence?.prev_hash || DASH}</span></div>
+                    <div><span className="text-zinc-500">chain_hash:&nbsp;&nbsp;&nbsp;</span> <span className="break-all">{decision.evidence?.chain_hash || DASH}</span></div>
                 </div>
             </div>
         </div>
@@ -94,12 +95,12 @@ export default function AuditView() {
                                 {decisions.map((d) => (
                                     <tr key={d.id} className="hover:bg-zinc-900/60 transition-colors duration-200" data-testid={`audit-row-${d.id}`}>
                                         <td className="py-3 px-4 font-mono text-xs text-zinc-300">{d.id}</td>
-                                        <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.timestamp}</td>
-                                        <td className="py-3 px-4 text-zinc-200">{d.action.replace(/_/g, " ")}</td>
-                                        <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.policy_version}</td>
+                                        <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.timestamp || DASH}</td>
+                                        <td className="py-3 px-4 text-zinc-200">{humanize(d.action)}</td>
+                                        <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.policy_version || DASH}</td>
                                         <td className="py-3 px-4"><StatusBadge status={d.policy_status} /></td>
                                         <td className="py-3 px-4 font-mono text-xs text-zinc-500">
-                                            {d.evidence.canonical_hash.slice(0, 16)}…
+                                            {truncHash(d.evidence?.canonical_hash)}
                                         </td>
                                         <td className="py-3 px-4 text-right">
                                             <Button
@@ -129,10 +130,10 @@ export default function AuditView() {
                                 <span className="font-mono text-xs text-zinc-300">{d.id}</span>
                                 <StatusBadge status={d.policy_status} />
                             </div>
-                            <div className="text-sm text-zinc-200">{d.action.replace(/_/g, " ")}</div>
-                            <div className="text-xs text-zinc-500 font-mono">{d.timestamp}</div>
+                            <div className="text-sm text-zinc-200">{humanize(d.action)}</div>
+                            <div className="text-xs text-zinc-500 font-mono">{d.timestamp || DASH}</div>
                             <div className="text-xs text-zinc-500 font-mono truncate">
-                                {d.evidence.canonical_hash.slice(0, 24)}…
+                                {truncHash(d.evidence?.canonical_hash, 24)}
                             </div>
                             <Button
                                 size="sm"

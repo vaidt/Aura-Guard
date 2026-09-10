@@ -1,45 +1,43 @@
-# Aura-Guard Compliance Auditor — PRD
+# Aura-Guard — PRD (Phase 1 Modernization)
 
 ## Original problem statement
-Build a professional web application called "Aura-Guard Compliance Auditor". Purpose: demonstrate how organizations can audit AI decisions and verify the integrity of their audit evidence. This is a product demonstrator, not an AI decision-maker. Core flows: dashboard, JSON log import + sample dataset, audit view, evidence verification view (canonical/SHA-256/hash-chain/policy version), tamper demonstration, printable compliance report. Deterministic demo data and verification logic. No ML / external AI / persistent identity. Label as demonstrator; do not claim EU AI Act certification.
+Aura-Guard Compliance Auditor: a demonstrator that shows how organizations can audit AI decisions and verify integrity of audit evidence. Dashboard, JSON import, audit view, evidence verification, tamper demonstration, printable report. Deterministic, no ML, no external AI.
 
-## User choices (2026-02)
-- Persistence: in-memory / single-session
-- Report export: browser Print / Save as PDF
-- Auth: open access
-- Theme: dark enterprise (SOC console feel)
-- Sample dataset: ~10 decisions
-- Modular verification logic so it can later be replaced by the normative Aura Protocol
+## Modernization Mission (2026-02, Phase 1)
+Transform the demonstrator into a **Conformance & Evidence Console** for the Aura protocol architecture. Keep protocol semantics OUT of the presentation layer. Never treat stored cryptographic fields as trustworthy — verifier must independently re-derive.
 
-## Architecture
-- Frontend (React + Tailwind + Shadcn UI) does all verification client-side via `SubtleCrypto` (SHA-256).
-- Verification module (`src/lib/verification.js`) is isolated: canonicalize → SHA-256 → hash-chain → policy check.
-- Sample session (`src/lib/sampleData.js`) with 10 deterministic decisions across two policy versions.
-- Backend (FastAPI) exposes `GET /api/` and `GET /api/health`; kept minimal for future Aura Protocol backend swap.
-- No MongoDB persistence (kept the connection wiring for future).
+## AS-IS → TO-BE architecture
+- **AS-IS:** UI → Context → `lib/verification.js` (pure). Verification results consumed by pages. Evidence bundle export exists.
+- **TO-BE:** UI → **Conformance Core** (`lib/conformanceCore.js`) → `lib/verification.js`. UI renders structured suite results; never recomputes.
 
-## User personas
-- Compliance / audit operator running a demonstrator during Builder Fest.
-- Regulator / stakeholder wanting to see how AI decisions are made tamper-evident.
+## What was implemented in this phase
+- **Conformance Core** (`/app/frontend/src/lib/conformanceCore.js`): `runConformanceSuite()` returns machine-readable `{ protocol_version, verifier_version, bundle_version, run_at, record_count, overall, tests[] }`. Test IDs prefixed `impl:` (non-normative). Constants: `PROTOCOL_VERSION="unspecified"`, `VERIFIER_VERSION="aura-guard-conformance-core/0.2.0"`.
+- **Conformance page** (`/conformance`): overall badge, per-test table, and raw JSON output. Reports NOT IMPLEMENTED for evidence-portability, cross-implementation, attestation-signature.
+- **TamperDemo**: stored vs re-derived hashes shown side-by-side in a 4-cell panel with visual pass/fail colouring.
+- **HashDisplay** component with clipboard copy (used-ready).
+- **Report**: cites `protocol_version`, `verifier_version`, `bundle_version`, "Report source: Evidence → Conformance Core → Report"; attestation section explicitly names NOT IMPLEMENTED areas.
+- **Verification core bug fix** (prior turn): `verifySession` now uses **re-derived** previous chain hash as `prev` so tamper cascades correctly.
+- **Regression tests**: `frontend/tests/verification.test.mjs` (11 tests) + `frontend/tests/conformance.test.mjs` (9 negative tests: reason mutation, policy_version mutation, canonical_hash mutation, prev_hash mutation, chain_hash mutation, id removal, record reordering, empty bundle).
 
-## What's implemented (2026-02)
-- Dashboard with session metadata, KPI cards, evidence-integrity status card, latest-entries ledger, Import JSON, Load sample.
-- Audit view: dense table (desktop) + card list (mobile), per-decision evidence dialog with canonical/prev/chain hashes.
-- Verification view: 4 aggregate check summary cards + full per-decision × per-check matrix (canonical / SHA-256 / hash-chain / policy).
-- Tamper demonstration: select any decision, mutate any tamperable field, live re-verification cascades hash-chain failures downstream. Reset restores.
-- Compliance report page: printable, 5 sections, PASS/FAIL badges, auditor attestation & disclaimer, print stylesheet.
-- Print stylesheet strips dark theme for PDF export.
+## What was NOT changed
+- `lib/verification.js` canonicalization (RFC-8785-flavoured JCS-lite) and SHA-256 primitives.
+- Sample dataset schema.
+- Dashboard, Audit, Report page layouts (only added meta).
+- Backend surface (health only).
+- No MongoDB persistence.
 
-## Prioritized backlog
-- P1: Multi-session history (requires switching to MongoDB persistence).
-- P1: Downloadable canonical-JSON evidence bundle (`.json` export beside print).
-- P2: Visual hash-chain graph (blocks with prev-hash arrows).
-- P2: Policy registry management UI (add/remove registered policy versions).
-- P2: Auditor sign-off with local key + detached signature over the report.
-- P2: Server-side re-verification endpoint to prove logic is portable across implementations.
+## Known limitations / NOT IMPLEMENTED
+- `impl:evidence-portability` — no independent verifier CLI in another environment.
+- `impl:cross-implementation` — only one reference implementation exists.
+- `impl:attestation-signature` — no cryptographic signature spec supplied.
+- `PROTOCOL_VERSION="unspecified"` — no normative Aura specification document supplied to this project.
+- Session state is in-memory only.
+- No authentication (open access per user preference).
 
-## Next tasks list
-1. Add evidence-bundle download (canonical JSON + hashes) next to Print.
-2. Add visual hash-chain diagram on Verification page.
-3. Add policy registry management + drift warnings.
-4. Optional: persist audit sessions in MongoDB with a Sessions list page.
+## Canonical demonstration flow (tested)
+Load sample → Dashboard (10 decisions, all PASS) → Verification (10/10 all checks) → Conformance (overall PASS, 3 NOT IMPLEMENTED) → Audit → Open a decision (inspect canonical/prev/chain hash + policy) → Tamper Demo (select DEC-0003, change `reason`, Apply) → Verification cascades FAIL through downstream records → Reset → PASS → Report → Export bundle / Print PDF.
+
+## Assumptions / TODOs
+- ASSUMPTION: RFC-8785-flavoured JCS-lite is an acceptable stand-in until a normative canonicalization scheme is defined.
+- TODO: standalone verifier CLI that re-verifies an exported bundle → enables `impl:evidence-portability` to move from NOT IMPLEMENTED to PASS.
+- TODO: attestation-signature spec (canonical payload for signing, algorithm, key lifecycle, encoding).

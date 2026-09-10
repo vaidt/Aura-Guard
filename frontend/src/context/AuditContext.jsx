@@ -1,32 +1,76 @@
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { SAMPLE_SESSION, REGISTERED_POLICY_VERSIONS } from "@/lib/sampleData";
 import { buildHashChain, verifySession } from "@/lib/verification";
+import { hasFullEvidence } from "@/lib/format";
 
 const AuditContext = createContext(null);
 
+/**
+ * Validate the imported JSON shape defensively.
+ * Throws with a user-facing message. Never mutates the input.
+ */
+export function validateSessionInput(parsed) {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("Session must be a JSON object.");
+    }
+    if (!Array.isArray(parsed.decisions)) {
+        throw new Error("Session is missing a `decisions` array.");
+    }
+    for (const [i, d] of parsed.decisions.entries()) {
+        if (!d || typeof d !== "object" || Array.isArray(d)) {
+            throw new Error(`decisions[${i}] must be an object.`);
+        }
+        if (!d.id) {
+            throw new Error(`decisions[${i}] is missing required field \`id\`.`);
+        }
+    }
+    return true;
+}
+
 export function AuditProvider({ children }) {
+    const [rawSession, setRawSession] = useState(null);
     const [session, setSession] = useState(null);
     const [decisions, setDecisions] = useState([]);
     const [tampered, setTampered] = useState(false);
     const [loading, setLoading] = useState(true);
     const [verification, setVerification] = useState(null);
+    const importedHadEvidence = useRef(false);
 
     const registeredPolicies = useMemo(
         () => new Set(session?.registered_policy_versions || REGISTERED_POLICY_VERSIONS),
         [session]
     );
 
-    const loadSession = useCallback(async (rawSession) => {
+    const loadSession = useCallback(async (rawInput) => {
         setLoading(true);
-        const chained = await buildHashChain(rawSession.decisions);
-        setSession({ ...rawSession, decisions: undefined });
+        validateSessionInput(rawInput);
+
+        // Deep-clone to avoid mutating caller's object.
+        const raw = JSON.parse(JSON.stringify(rawInput));
+        const allHaveEvidence = raw.decisions.length > 0 && raw.decisions.every(hasFullEvidence);
+        importedHadEvidence.current = allHaveEvidence;
+
+        // If evidence is already present on every record, preserve it verbatim.
+        // Otherwise, synthesize a hash chain so the demo can verify + tamper.
+        const chained = allHaveEvidence ? raw.decisions : await buildHashChain(raw.decisions);
+
+        // Session metadata excludes decisions (which live in their own state slice).
+        // eslint-disable-next-line no-unused-vars
+        const { decisions: _dec, ...meta } = raw;
+
+        setRawSession(raw);
+        setSession(meta);
         setDecisions(chained);
         setTampered(false);
         setLoading(false);
     }, []);
 
     useEffect(() => {
-        loadSession(SAMPLE_SESSION);
+        loadSession(SAMPLE_SESSION).catch((e) => {
+            // eslint-disable-next-line no-console
+            console.error("Sample session load failed:", e);
+            setLoading(false);
+        });
     }, [loadSession]);
 
     useEffect(() => {
@@ -51,10 +95,10 @@ export function AuditProvider({ children }) {
                 const copy = { ...d };
                 if (field.startsWith("output.")) {
                     const key = field.split(".")[1];
-                    copy.output = { ...copy.output, [key]: newValue };
+                    copy.output = { ...(copy.output || {}), [key]: newValue };
                 } else if (field.startsWith("input.")) {
                     const key = field.split(".")[1];
-                    copy.input = { ...copy.input, [key]: newValue };
+                    copy.input = { ...(copy.input || {}), [key]: newValue };
                 } else {
                     copy[field] = newValue;
                 }
@@ -70,9 +114,6 @@ export function AuditProvider({ children }) {
 
     const importSession = useCallback(
         async (parsed) => {
-            if (!parsed || !Array.isArray(parsed.decisions)) {
-                throw new Error("Invalid session: expected `decisions` array.");
-            }
             await loadSession(parsed);
         },
         [loadSession]
@@ -89,6 +130,7 @@ export function AuditProvider({ children }) {
     const integrityOk = verification?.allPass ?? null;
 
     const value = {
+        rawSession,
         session,
         decisions,
         stats,
@@ -100,6 +142,7 @@ export function AuditProvider({ children }) {
         resetSession,
         importSession,
         registeredPolicies,
+        importedHadEvidence: importedHadEvidence.current,
     };
 
     return <AuditContext.Provider value={value}>{children}</AuditContext.Provider>;

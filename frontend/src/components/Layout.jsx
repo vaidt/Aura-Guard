@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ShieldCheck, LayoutDashboard, ListChecks, FileSearch, AlertTriangle, FileText } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, ListChecks, FileSearch, AlertTriangle, FileText, CheckSquare } from "lucide-react";
 import { useAudit } from "@/context/AuditContext";
 import { Badge } from "@/components/ui/badge";
 
@@ -8,6 +8,7 @@ const NAV = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true, testid: "nav-dashboard" },
     { to: "/audit", label: "Audit", icon: ListChecks, testid: "nav-audit" },
     { to: "/verification", label: "Verification", icon: FileSearch, testid: "nav-verification" },
+    { to: "/conformance", label: "Conformance", icon: CheckSquare, testid: "nav-conformance" },
     { to: "/tamper", label: "Tamper Demo", icon: AlertTriangle, testid: "nav-tamper" },
     { to: "/report", label: "Report", icon: FileText, testid: "nav-report" },
 ];

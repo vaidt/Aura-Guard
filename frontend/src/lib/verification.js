@@ -154,9 +154,10 @@ export async function verifySession(decisions, expectedPolicyVersions) {
     for (const d of decisions) {
         const r = await verifyDecision(d, prev, expectedPolicyVersions);
         results.push({ id: d.id, ...r });
-        // Use the (possibly compromised) stored chain_hash as prev for continuity check,
-        // but recomputed value is what integrity is actually judged against.
-        prev = d.evidence?.chain_hash || prev;
+        // Chain semantics: the auditor recomputes the previous row's chain hash
+        // and expects the next row's prev_hash to link to THAT — so tampering
+        // any record causes a cascading failure through every subsequent link.
+        prev = r.recomputedChain;
     }
     const allPass = results.every((r) => r.pass);
     return { allPass, results };

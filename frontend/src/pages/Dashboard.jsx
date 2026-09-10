@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Upload, RotateCcw, Database, ShieldCheck, ShieldAlert, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { humanize, truncHash } from "@/lib/format";
 
 function KpiCard({ label, value, sub, tone = "default", Icon, testid }) {
     const toneClass = {
@@ -192,16 +193,17 @@ export default function Dashboard() {
                         {decisions.slice(-5).reverse().map((d) => (
                             <div key={d.id} className="py-3 flex items-center gap-4 text-sm">
                                 <span className="font-mono text-zinc-400 w-24 shrink-0">{d.id}</span>
-                                <span className="text-zinc-300 truncate flex-1">{d.action.replace(/_/g, " ")}</span>
+                                <span className="text-zinc-300 truncate flex-1">{humanize(d.action)}</span>
                                 <span className="hidden sm:inline text-zinc-500 font-mono text-xs w-40 truncate">
-                                    {d.evidence.canonical_hash.slice(0, 16)}…
+                                    {truncHash(d.evidence?.canonical_hash)}
                                 </span>
                                 <span className={`font-mono text-[11px] uppercase tracking-wider ${
                                     d.policy_status === "compliant" ? "text-emerald-400"
                                     : d.policy_status === "warning" ? "text-amber-400"
-                                    : "text-red-400"
+                                    : d.policy_status === "violation" ? "text-red-400"
+                                    : "text-zinc-400"
                                 }`}>
-                                    {d.policy_status}
+                                    {d.policy_status || "—"}
                                 </span>
                             </div>
                         ))}

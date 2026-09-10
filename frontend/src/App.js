@@ -6,6 +6,7 @@ import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import AuditView from "@/pages/AuditView";
 import Verification from "@/pages/Verification";
+import Conformance from "@/pages/Conformance";
 import TamperDemo from "@/pages/TamperDemo";
 import Report from "@/pages/Report";
 
@@ -19,6 +20,7 @@ function App() {
                             <Route path="/" element={<Dashboard />} />
                             <Route path="/audit" element={<AuditView />} />
                             <Route path="/verification" element={<Verification />} />
+                            <Route path="/conformance" element={<Conformance />} />
                             <Route path="/tamper" element={<TamperDemo />} />
                             <Route path="/report" element={<Report />} />
                         </Route>

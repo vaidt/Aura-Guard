@@ -1,12 +1,31 @@
 import React from "react";
 import { useAudit } from "@/context/AuditContext";
 import { Button } from "@/components/ui/button";
-import { Printer } from "lucide-react";
+import { Printer, Download } from "lucide-react";
 import StatusBadge, { PassFailBadge } from "@/components/StatusBadge";
+import { humanize, truncHash, DASH } from "@/lib/format";
+import { buildEvidenceBundle, downloadJson } from "@/lib/exportBundle";
+import { toast } from "sonner";
 
 export default function Report() {
-    const { session, decisions, stats, verification, integrityOk, tampered } = useAudit();
+    const { rawSession, session, decisions, stats, verification, integrityOk, tampered, importedHadEvidence } = useAudit();
     const generatedAt = new Date().toISOString();
+
+    const onExportBundle = () => {
+        try {
+            const bundle = buildEvidenceBundle({
+                rawSession: { ...rawSession, decisions: undefined, ...session },
+                decisions,
+                importedHadEvidence,
+                generatedAt,
+            });
+            const filename = `${session?.session_id || "aura-guard-session"}.evidence.json`;
+            downloadJson(filename, bundle);
+            toast.success("Evidence bundle exported", { description: filename });
+        } catch (e) {
+            toast.error("Export failed", { description: e.message });
+        }
+    };
 
     return (
         <div>
@@ -15,13 +34,23 @@ export default function Report() {
                     <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-mono">Compliance report</div>
                     <div className="font-display text-xl text-zinc-100">Ready for export / print</div>
                 </div>
-                <Button
-                    className="rounded-sm bg-zinc-100 text-zinc-900 hover:bg-white"
-                    onClick={() => window.print()}
-                    data-testid="print-report-btn"
-                >
-                    <Printer className="h-4 w-4 mr-2" strokeWidth={2} /> Print / Save as PDF
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        className="rounded-sm border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-100"
+                        onClick={onExportBundle}
+                        data-testid="export-bundle-btn"
+                    >
+                        <Download className="h-4 w-4 mr-2" strokeWidth={2} /> Export evidence bundle (JSON)
+                    </Button>
+                    <Button
+                        className="rounded-sm bg-zinc-100 text-zinc-900 hover:bg-white"
+                        onClick={() => window.print()}
+                        data-testid="print-report-btn"
+                    >
+                        <Printer className="h-4 w-4 mr-2" strokeWidth={2} /> Print / Save as PDF
+                    </Button>
+                </div>
             </div>
 
             <div className="print-page bg-white text-zinc-900 mx-auto max-w-4xl px-8 py-10 border border-zinc-800 print:border-none print:shadow-none rounded-md" data-testid="report-page">
@@ -47,6 +76,10 @@ export default function Report() {
                         <MetaField label="Organization" value={session?.organization} />
                         <MetaField label="Auditor" value={session?.auditor} />
                         <MetaField label="Records" value={String(stats.total)} />
+                        <MetaField label="Protocol version" value="unspecified" />
+                        <MetaField label="Verifier version" value="aura-guard-conformance-core/0.2.0" />
+                        <MetaField label="Bundle version" value="1" />
+                        <MetaField label="Report source" value="Evidence → Conformance Core → Report" />
                     </div>
                 </div>
 
@@ -110,11 +143,11 @@ export default function Report() {
                             {decisions.map((d) => (
                                 <tr key={d.id} className="border-b border-zinc-200">
                                     <td className="py-2 px-2 font-mono">{d.id}</td>
-                                    <td className="py-2 px-2 font-mono">{d.timestamp}</td>
-                                    <td className="py-2 px-2">{d.action.replace(/_/g, " ")}</td>
-                                    <td className="py-2 px-2 font-mono">{d.policy_version}</td>
+                                    <td className="py-2 px-2 font-mono">{d.timestamp || DASH}</td>
+                                    <td className="py-2 px-2">{humanize(d.action)}</td>
+                                    <td className="py-2 px-2 font-mono">{d.policy_version || DASH}</td>
                                     <td className="py-2 px-2"><StatusBadge status={d.policy_status} /></td>
-                                    <td className="py-2 px-2 font-mono">{d.evidence.canonical_hash.slice(0, 16)}…</td>
+                                    <td className="py-2 px-2 font-mono">{truncHash(d.evidence?.canonical_hash)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -154,14 +187,16 @@ export default function Report() {
                 <section className="mb-4">
                     <SectionTitle>5 · Auditor attestation</SectionTitle>
                     <p className="text-[12px] text-zinc-700 mt-2 leading-relaxed">
-                        The auditor re-derived canonical representations of every decision using deterministic
-                        RFC-8785-flavoured JSON canonicalization, recomputed SHA-256 digests, and verified
-                        hash-chain continuity across the session. Policy versions were checked against the
-                        registered policy set declared at session start.
+                        Report values are produced by the Conformance Core (implementation-level, non-normative)
+                        wrapping a read-only verifier. The verifier re-derives canonical representations using
+                        deterministic RFC-8785-flavoured JSON canonicalization, recomputes SHA-256 digests, and
+                        verifies hash-chain continuity across the session. Stored evidence is never mutated.
                     </p>
                     <p className="text-[11px] text-zinc-500 mt-3 italic">
-                        Aura-Guard is a compliance/audit demonstrator. It is not a certified compliance product and
-                        does not constitute an EU AI Act, SOC 2, ISO 27001 or any other regulatory attestation.
+                        Aura-Guard is a Conformance &amp; Evidence Console demonstrator. It is not a certified
+                        compliance product and does not constitute an EU AI Act, SOC 2, ISO 27001 or any other
+                        regulatory attestation. Signature / attestation-signing, evidence portability and
+                        cross-implementation agreement tests are reported as NOT IMPLEMENTED in this phase.
                     </p>
                     <div className="grid grid-cols-2 gap-6 mt-6">
                         <div className="border-t border-zinc-400 pt-1 text-[11px] font-mono text-zinc-700">

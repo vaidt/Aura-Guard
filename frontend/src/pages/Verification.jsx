@@ -3,6 +3,7 @@ import { useAudit } from "@/context/AuditContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { PassFailBadge } from "@/components/StatusBadge";
 import { CheckCircle2, XCircle } from "lucide-react";
+import HashChainDiagram from "@/components/HashChainDiagram";
 
 export default function Verification() {
     const { decisions, verification } = useAudit();
@@ -74,6 +75,8 @@ export default function Verification() {
                     );
                 })}
             </div>
+
+            <HashChainDiagram decisions={decisions} verification={verification} />
 
             <Card className="bg-zinc-900/40 border border-zinc-800 rounded-md overflow-hidden">
                 <CardContent className="p-0">
