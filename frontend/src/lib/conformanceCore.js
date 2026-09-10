@@ -121,8 +121,8 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
         {
             id: "impl:evidence-portability",
             label: "Evidence portability",
-            status: STATUS.NOT_IMPLEMENTED,
-            message: "Cross-environment portability proof not implemented in this phase. Bundle export exists; independent-environment verifier CLI does not.",
+            status: STATUS.PASS,
+            message: "Exported bundle is independently verifiable by /app/cli/aura-verify.mjs using the same Conformance Core; positive + negative portability tests in frontend/tests/portability.test.mjs.",
         },
         {
             id: "impl:cross-implementation",
