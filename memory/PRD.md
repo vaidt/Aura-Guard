@@ -1,4 +1,4 @@
-# Aura-Guard — PRD (Phase 2.5 · Code-Quality Hardening)
+# Aura-Guard — PRD (Phase 3 · Architecture Pack)
 
 ## Original problem statement
 Aura-Guard Compliance Auditor: a demonstrator that shows how organizations can audit AI decisions and verify integrity of audit evidence. Dashboard, JSON import, audit view, evidence verification, tamper demonstration, printable report. Deterministic, no ML, no external AI.
@@ -34,8 +34,24 @@ Transform the demonstrator into a **Conformance & Evidence Console** for the Aur
 - Demo signing key committed to source — DEMO ONLY.
 - Session state is in-memory only; no authentication.
 
+## Phase 3 — Architecture Pack (done, 2026-02-02, analysis only, no code changes)
+- Delivered six documentation-only artifacts under `/app/docs/`:
+  - `PHASE_3_SEMANTIC_INVENTORY.md` — 16 files inspected, semantic surfaces enumerated with FACT / TESTED / ASSUMPTION / AMBIGUITY tags.
+  - `PHASE_3_PROTOCOL_DECISION_MATRIX.md` — 12 canonical Owner decisions P-001 … P-012 (question → options → RECOMMENDATION ONLY → OWNER DECISION REQUIRED).
+  - `PHASE_3_AMBIGUITY_REGISTER.md` — 23 rows (16 canonical A-001…A-016 + 7 discovered A-101…A-107).
+  - `PHASE_3_GOLDEN_VECTOR_PLAN.md` — golden-vector categories, coverage gaps, BLOCKED BY DECISION P-XXX markers.
+  - `PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md` — 30 candidate `AURA-INV-*` invariants across 15 categories.
+  - `PHASE_3_ARCHITECTURE_PACK.md` — final combined report with sequencing recommendations.
+- Discovered additional candidate domains (NOT promoted into canonical catalogue): P-013 attestation governance, P-014 replay/idempotency, P-015 policy comparator, P-016 cascade source, P-017 envelope openness.
+- Confirmed no production code was changed (verified via `git status --short`: only `docs/PHASE_3_*.md` files added).
+- Cross-file consistency check flagged one drift: `BINDING_MATRIX_VERSION` = `1.3` in JS vs `1.2` hard-coded in `aura_verify.py` (recorded as A-012, blocked by P-009).
+
 ## Roadmap / next tasks
-- P1: Failure attribution panel on Report (which record + which invariant, incl. attestation code).
-- P1: In-UI "Attest session" action button + Attestation status card on Dashboard.
-- P2: Third reference verifier (Go/Rust stdlib) → N-way agreement matrix.
+- **P0 (Owner)**: Rule on P-001 … P-012 to unblock `protocol_version` transition out of `"unspecified"`.
+- **P0 (Owner)**: Elect whether to promote P-013 … P-017 into the normative catalogue.
+- **P1 (post-decision)**: Backfill golden vectors currently marked BLOCKED BY DECISION P-XXX.
+- **P1 (post-decision)**: Sync `BINDING_MATRIX_VERSION` between JS (`1.3`) and Python (`1.2`).
+- **P1**: Failure attribution panel on Report (which record + which invariant, incl. attestation code).
+- **P1**: In-UI "Attest session" action button + Attestation status card on Dashboard.
+- **P2**: Third reference verifier (Go/Rust stdlib) → N-way agreement matrix.
 - P2: Multi-key rotation demo bundle set.
