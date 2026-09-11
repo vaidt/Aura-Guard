@@ -6,6 +6,7 @@ import os
 import logging
 from pathlib import Path
 from datetime import datetime, timezone
+from typing import Any
 
 
 ROOT_DIR = Path(__file__).parent
@@ -22,7 +23,7 @@ api_router = APIRouter(prefix="/api")
 
 
 @api_router.get("/")
-async def root():
+async def root() -> dict[str, Any]:
     return {
         "service": "aura-guard-compliance-auditor",
         "status": "ok",
@@ -32,7 +33,7 @@ async def root():
 
 
 @api_router.get("/health")
-async def health():
+async def health() -> dict[str, str]:
     return {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -57,5 +58,5 @@ logger = logging.getLogger(__name__)
 
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
+async def shutdown_db_client() -> None:
     client.close()

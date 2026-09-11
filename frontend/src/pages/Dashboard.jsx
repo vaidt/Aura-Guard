@@ -35,6 +35,25 @@ function KpiCard({ label, value, sub, tone = "default", Icon, testid }) {
     );
 }
 
+function integrityTone(integrityOk) {
+    if (integrityOk === null) return { card: "bg-zinc-900/60 border-zinc-800", text: "text-zinc-300", headline: "Computing…" };
+    if (integrityOk)          return { card: "bg-emerald-500/[0.04] border-emerald-800/60", text: "text-emerald-400", headline: "All checks passed" };
+    return { card: "bg-red-500/[0.05] border-red-800/60", text: "text-red-400", headline: "Integrity failure detected" };
+}
+
+function integrityDetail(integrityOk, tampered) {
+    if (integrityOk) return "Canonical representation, SHA-256 integrity, hash-chain continuity and policy version verified across all decisions.";
+    if (tampered)    return "One or more decisions were modified after evidence generation. Hash-chain no longer resolves.";
+    return "One or more decisions failed cryptographic or policy verification.";
+}
+
+function statusTone(status) {
+    if (status === "compliant") return "text-emerald-400";
+    if (status === "warning")   return "text-amber-400";
+    if (status === "violation") return "text-red-400";
+    return "text-zinc-400";
+}
+
 export default function Dashboard() {
     const { session, stats, integrityOk, tampered, resetSession, importSession, decisions } = useAudit();
     const fileRef = useRef(null);
@@ -133,13 +152,7 @@ export default function Dashboard() {
                 />
             </div>
 
-            <Card className={`rounded-md border ${
-                integrityOk === null
-                    ? "bg-zinc-900/60 border-zinc-800"
-                    : integrityOk
-                    ? "bg-emerald-500/[0.04] border-emerald-800/60"
-                    : "bg-red-500/[0.05] border-red-800/60"
-            }`} data-testid="integrity-card">
+            <Card className={`rounded-md border ${integrityTone(integrityOk).card}`} data-testid="integrity-card">
                 <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center gap-6">
                     <div className="flex items-center gap-4">
                         {integrityOk ? (
@@ -151,15 +164,11 @@ export default function Dashboard() {
                             <div className="text-[10px] uppercase tracking-[0.22em] text-zinc-500 font-mono">
                                 Evidence integrity
                             </div>
-                            <div className={`font-display text-2xl font-semibold ${integrityOk ? "text-emerald-400" : "text-red-400"}`}>
-                                {integrityOk === null ? "Computing…" : integrityOk ? "All checks passed" : "Integrity failure detected"}
+                            <div className={`font-display text-2xl font-semibold ${integrityTone(integrityOk).text}`}>
+                                {integrityTone(integrityOk).headline}
                             </div>
                             <div className="text-xs text-zinc-400 mt-1 max-w-xl">
-                                {integrityOk
-                                    ? "Canonical representation, SHA-256 integrity, hash-chain continuity and policy version verified across all decisions."
-                                    : tampered
-                                    ? "One or more decisions were modified after evidence generation. Hash-chain no longer resolves."
-                                    : "One or more decisions failed cryptographic or policy verification."}
+                                {integrityDetail(integrityOk, tampered)}
                             </div>
                         </div>
                     </div>
@@ -197,12 +206,7 @@ export default function Dashboard() {
                                 <span className="hidden sm:inline text-zinc-500 font-mono text-xs w-40 truncate">
                                     {truncHash(d.evidence?.canonical_hash)}
                                 </span>
-                                <span className={`font-mono text-[11px] uppercase tracking-wider ${
-                                    d.policy_status === "compliant" ? "text-emerald-400"
-                                    : d.policy_status === "warning" ? "text-amber-400"
-                                    : d.policy_status === "violation" ? "text-red-400"
-                                    : "text-zinc-400"
-                                }`}>
+                                <span className={`font-mono text-[11px] uppercase tracking-wider ${statusTone(d.policy_status)}`}>
                                     {d.policy_status || "—"}
                                 </span>
                             </div>

@@ -4,6 +4,7 @@ import { buildHashChain, verifySession } from "@/lib/verification";
 import { hasFullEvidence } from "@/lib/format";
 import { signAttestation } from "@/lib/attestation";
 import { DEMO_KEY_ID, DEMO_PUBLIC_KEY_HEX, DEMO_PRIVATE_KEY_HEX } from "@/lib/demoKeys";
+import { log } from "@/lib/logger";
 
 const AuditContext = createContext(null);
 
@@ -86,16 +87,14 @@ export function AuditProvider({ children }) {
             setAttestation(att);
             return att;
         } catch (e) {
-            // eslint-disable-next-line no-console
-            console.warn("attest failed (Ed25519 signing unavailable):", e.message);
+            log.warn("attest failed (Ed25519 signing unavailable):", e.message);
             return null;
         }
     }, [session, decisions]);
 
     useEffect(() => {
         loadSession(SAMPLE_SESSION).catch((e) => {
-            // eslint-disable-next-line no-console
-            console.error("Sample session load failed:", e);
+            log.error("Sample session load failed:", e);
             setLoading(false);
         });
     }, [loadSession]);
