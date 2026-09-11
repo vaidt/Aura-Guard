@@ -6,6 +6,9 @@
  *
  * - canonicalize(): RFC-8785-flavoured JCS-lite canonicalization
  *   (sorted object keys, no insignificant whitespace, deterministic array order).
+ *   NOTE (R2): storing `canonical_representation` inside evidence is an
+ *   IMPLEMENTATION-DEFINED choice at this stage, PENDING the normative Aura
+ *   Protocol specification. See /app/docs/BUNDLE_SCHEMA.md.
  * - sha256Hex(): SHA-256 hash via the browser SubtleCrypto API.
  * - buildHashChain(): computes canonical hash + chained hash for each decision.
  * - verifyDecision(): re-derives hashes and compares to the stored evidence.

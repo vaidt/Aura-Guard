@@ -15,8 +15,35 @@
  *     `NOT IMPLEMENTED` — never fabricated as PASS.
  */
 
-import { canonicalize, sha256Hex, verifySession } from "./verification.js";
+import { canonicalize, sha256Hex, verifySession, verifyDecision } from "./verification.js";
 import { hasFullEvidence } from "./format.js";
+
+/**
+ * Runtime tamper-detection probe (F3 remediation).
+ *
+ * Runs a deterministic mutation on an ISOLATED deep-clone of the first record,
+ * then runs the real verifier (`verifyDecision`) against the mutation. Returns
+ * whether the verifier detected the tamper. The original bundle is never
+ * touched.
+ *
+ * The probe is injectable so a regression test can prove that if the verifier
+ * stopped detecting the mutation, this test would flip to FAIL.
+ */
+export async function tamperProbe(decisions, registeredPolicies, verifyFn = verifyDecision) {
+    if (!Array.isArray(decisions) || decisions.length === 0) {
+        return { ran: false, detected: false, reason: "no records" };
+    }
+    const original = decisions[0];
+    const mutated = JSON.parse(JSON.stringify(original));
+    mutated.reason = `__tamper_probe__${Math.random()}`; // deterministic-in-shape mutation
+    const prev = original.evidence?.prev_hash || "0".repeat(64);
+    const r = await verifyFn(mutated, prev, registeredPolicies);
+    const detected =
+        !r.pass &&
+        r.checks.sha256_integrity.pass === false &&
+        r.checks.canonical_representation.pass === false;
+    return { ran: true, detected, checks: r.checks };
+}
 
 export const PROTOCOL_VERSION = "unspecified"; // No normative spec supplied.
 export const VERIFIER_VERSION = "aura-guard-conformance-core/0.2.0";
@@ -70,6 +97,11 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
     // Run the cryptographic verifier (single source of truth for hash logic).
     const v = await verifySession(decisions, registeredPolicies);
 
+    // F3 remediation: runtime tamper probe — deterministic mutation on an
+    // isolated clone, then real verification. Returns PASS iff the verifier
+    // actually detected the mutation. NOT derived from v.allPass.
+    const probe = await tamperProbe(decisions, registeredPolicies);
+
     const check = (key) =>
         v.results.every((r) => r.checks[key].pass) ? STATUS.PASS : STATUS.FAIL;
 
@@ -86,7 +118,10 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
             id: "impl:canonical-representation",
             label: "Canonical representation",
             status: check("canonical_representation"),
-            message: "RFC-8785-flavoured JCS-lite canonicalization; re-derived payload must equal stored representation.",
+            // R2: canonical_representation is stored inside evidence at this
+            // implementation level. This is implementation-defined and PENDING
+            // the normative Aura Protocol specification. See docs/BUNDLE_SCHEMA.md.
+            message: "Implementation-defined JCS-lite canonicalization (RFC-8785-flavoured), pending normative Aura specification. Re-derived payload must equal stored evidence.canonical_representation.",
         },
         {
             id: "impl:hash-integrity",
@@ -106,17 +141,18 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
             status: check("policy_version"),
             message: "Every decision's policy_version must be in the registered policy set.",
         },
-        // Tamper detection is asserted at the runtime level by the negative regression
-        // suite (see /app/frontend/tests/verification.test.mjs). For a live bundle,
-        // this test reports PASS iff the cryptographic invariants above hold — which
-        // means an untampered bundle is trusted AND a tampered bundle is caught.
+        // F3 remediation: driven by the runtime probe above, NOT by v.allPass.
+        // PASS iff a deterministic mutation on an isolated clone caused the real
+        // verifier to fail the expected integrity checks.
         {
             id: "impl:tamper-detection",
             label: "Tamper detection",
-            status: v.allPass ? STATUS.PASS : STATUS.FAIL,
-            message: v.allPass
-                ? "Current bundle passes cryptographic invariants — tamper would be detected by the verifier."
-                : "Cryptographic invariants failed — tamper detected by the verifier.",
+            status: probe.ran && probe.detected ? STATUS.PASS : STATUS.FAIL,
+            message: probe.ran && probe.detected
+                ? "Runtime probe: deterministic mutation on an isolated clone was detected by the real verifier (sha256_integrity + canonical_representation FAIL as expected)."
+                : probe.ran
+                ? "Runtime probe FAILED: deterministic mutation was NOT detected by the verifier."
+                : "Runtime probe could not run (no records).",
         },
         {
             id: "impl:evidence-portability",
