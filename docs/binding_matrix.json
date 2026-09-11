@@ -1,0 +1,155 @@
+{
+  "$schema_note": "Non-normative machine-readable binding matrix. Consumed by /app/frontend/src/lib/conformanceCore.js and validated by /app/frontend/tests/bindingMatrix.test.mjs.",
+  "matrix_version": "1.0",
+  "protocol_version": "unspecified",
+  "status": "implementation-level",
+  "generated_at": "2026-02-01",
+  "authorities": {
+    "schema_doc": "/app/docs/BUNDLE_SCHEMA.md",
+    "binding_doc": "/app/docs/BINDING_MATRIX.md",
+    "canonicalizer_js": "/app/frontend/src/lib/verification.js",
+    "canonicalizer_py": "/app/py_verifier/aura_verify.py",
+    "conformance_core_js": "/app/frontend/src/lib/conformanceCore.js",
+    "node_cli": "/app/cli/aura-verify.mjs"
+  },
+  "notes": [
+    "Requirement IDs are IMPL-scoped (REQ-*-*) until a normative Aura Protocol specification is supplied.",
+    "Each row is intentionally atomic: one invariant maps to exactly one implementation check function.",
+    "Rows with impl_check_id=null are declared gaps and are enumerated so they can never be silently claimed as PASS."
+  ],
+  "invariants": [
+    {
+      "id": "INV-STR-01",
+      "category": "structural",
+      "requirement_ids": ["REQ-STR-01", "REQ-STR-02"],
+      "statement": "Every decision record MUST carry a non-empty `id` and a full `evidence` object with canonical_representation, canonical_hash, prev_hash, chain_hash.",
+      "impl_check_id": "impl:evidence-structure",
+      "check_function": "checkEvidenceStructure",
+      "bundle_fields": [
+        "decisions[i].id",
+        "decisions[i].evidence.canonical_representation",
+        "decisions[i].evidence.canonical_hash",
+        "decisions[i].evidence.prev_hash",
+        "decisions[i].evidence.chain_hash"
+      ],
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "INV-CAN-01",
+      "category": "canonicalization",
+      "requirement_ids": ["REQ-CAN-01", "REQ-CAN-02"],
+      "statement": "For every decision, canonicalize(payload_without_evidence) MUST equal evidence.canonical_representation byte-for-byte.",
+      "impl_check_id": "impl:canonical-representation",
+      "check_function": "checkCanonicalRepresentation",
+      "bundle_fields": [
+        "decisions[i] (excluding evidence)",
+        "decisions[i].evidence.canonical_representation"
+      ],
+      "status": "IMPLEMENTED",
+      "caveats": [
+        "Canonicalization is JCS-lite (sorted keys, in-order arrays, no whitespace, JSON string encoding). Pending normative Aura specification (RFC 8785 or equivalent)."
+      ]
+    },
+    {
+      "id": "INV-HASH-01",
+      "category": "integrity",
+      "requirement_ids": ["REQ-HASH-01"],
+      "statement": "For every decision, sha256Hex(evidence.canonical_representation) MUST equal evidence.canonical_hash.",
+      "impl_check_id": "impl:hash-integrity",
+      "check_function": "checkSha256Integrity",
+      "bundle_fields": [
+        "decisions[i].evidence.canonical_representation",
+        "decisions[i].evidence.canonical_hash"
+      ],
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "INV-CHN-01",
+      "category": "chain",
+      "requirement_ids": ["REQ-CHN-01", "REQ-CHN-02", "REQ-CHN-03"],
+      "statement": "For i=0, evidence.prev_hash MUST equal 64 zero hex characters (genesis). For i>0, evidence.prev_hash MUST equal the recomputed chain_hash of decision[i-1]. For every i, evidence.chain_hash MUST equal sha256Hex(prev_hash || canonical_hash).",
+      "impl_check_id": "impl:chain-continuity",
+      "check_function": "checkChainContinuity",
+      "bundle_fields": [
+        "decisions[i].evidence.prev_hash",
+        "decisions[i].evidence.chain_hash",
+        "decisions[i].evidence.canonical_hash"
+      ],
+      "status": "IMPLEMENTED",
+      "cascade": "Any mutation of any record's canonical payload propagates to that record's canonical_hash and chain_hash, which in turn breaks the prev_hash link of every subsequent record."
+    },
+    {
+      "id": "INV-POL-01",
+      "category": "policy",
+      "requirement_ids": ["REQ-POL-01"],
+      "statement": "For every decision, decision.policy_version MUST be a non-empty string that is a member of session.registered_policy_versions.",
+      "impl_check_id": "impl:policy-binding",
+      "check_function": "checkPolicyBinding",
+      "bundle_fields": [
+        "decisions[i].policy_version",
+        "session.registered_policy_versions"
+      ],
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "INV-TMP-01",
+      "category": "tamper-detection",
+      "requirement_ids": ["REQ-TMP-01"],
+      "statement": "A deterministic mutation of a decision's payload on an isolated deep-clone MUST cause the real verifier to fail both canonical_representation and sha256_integrity for that record. The original bundle MUST NOT be mutated by the probe.",
+      "impl_check_id": "impl:tamper-detection",
+      "check_function": "checkTamperDetection",
+      "bundle_fields": [
+        "decisions[i] (clone only)"
+      ],
+      "status": "IMPLEMENTED",
+      "note": "This is a runtime probe, not a static assertion; PASS iff the real verifier detects the mutation."
+    },
+    {
+      "id": "INV-POR-01",
+      "category": "portability",
+      "requirement_ids": ["REQ-POR-01"],
+      "statement": "An exported evidence bundle MUST be independently verifiable by /app/cli/aura-verify.mjs (Node) and /app/py_verifier/aura_verify.py (Python stdlib) without mutation of the bundle file.",
+      "impl_check_id": "impl:evidence-portability",
+      "check_function": "checkEvidencePortability",
+      "evidence_test_files": [
+        "/app/frontend/tests/portability.test.mjs",
+        "/app/py_verifier/tests/test_cross_impl.py"
+      ],
+      "status": "IMPLEMENTED",
+      "note": "Reported at runtime as PASS because a positive-and-negative portability test matrix exists in the repository and is executed in CI-equivalent scripts."
+    },
+    {
+      "id": "INV-XIM-01",
+      "category": "cross-implementation",
+      "requirement_ids": ["REQ-XIM-01"],
+      "statement": "Two independent verifier implementations (Node ESM + Python stdlib) MUST produce the same overall result and the same per-test status for every bundle in the parametric mutation matrix.",
+      "impl_check_id": "impl:cross-implementation",
+      "check_function": "checkCrossImplementation",
+      "evidence_test_files": [
+        "/app/py_verifier/tests/test_cross_impl.py"
+      ],
+      "status": "NOT_IMPLEMENTED_AT_RUNTIME",
+      "note": "Cross-implementation agreement is established out-of-band by the parametric test matrix; it is NOT a runtime property of a single verifier invocation and is therefore honestly reported NOT IMPLEMENTED by any single verifier."
+    },
+    {
+      "id": "INV-ATT-01",
+      "category": "attestation",
+      "requirement_ids": ["REQ-ATT-01"],
+      "statement": "An attestation signature over a canonical attestation payload MUST verify against a registered verifying key.",
+      "impl_check_id": "impl:attestation-signature",
+      "check_function": "checkAttestationSignature",
+      "status": "NOT_IMPLEMENTED",
+      "note": "No normative signature scheme, key lifecycle, or canonical attestation payload has been specified. Deliberately reported NOT IMPLEMENTED and never PASS."
+    },
+    {
+      "id": "INV-FLT-01",
+      "category": "canonicalization-gap",
+      "requirement_ids": ["REQ-FLT-01"],
+      "statement": "Floating-point numeric canonicalization MUST be bit-exact across all conforming implementations for the same JSON numeric input.",
+      "impl_check_id": null,
+      "check_function": null,
+      "status": "NOT_IMPLEMENTED",
+      "note": "Declared gap. Current sample data uses integer-safe values only; JS JSON.stringify and Python json.dumps may diverge on non-decimal floats (e.g. 0.1). Cannot be claimed as PASS until a normative Aura canonicalization spec fixes the numeric representation."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAudit } from "@/context/AuditContext";
-import { runConformanceSuite, PROTOCOL_VERSION, VERIFIER_VERSION, BUNDLE_VERSION, STATUS } from "@/lib/conformanceCore";
+import { runConformanceSuite, PROTOCOL_VERSION, VERIFIER_VERSION, BUNDLE_VERSION, BINDING_MATRIX_VERSION, STATUS } from "@/lib/conformanceCore";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -42,14 +42,15 @@ export default function Conformance() {
                     Conformance suite
                 </h1>
                 <p className="text-sm text-zinc-400 mt-2 max-w-2xl">
-                    Structured, machine-readable results from the implementation-level Conformance Core. Test identifiers are prefixed <span className="font-mono text-zinc-300">impl:</span> to signal they are not normative protocol identifiers. Unimplemented capabilities are reported honestly as <span className="font-mono text-zinc-300">NOT IMPLEMENTED</span>.
+                    Structured, machine-readable results from the implementation-level Conformance Core. Every emitted test is wired to a row in the <a href="/docs/BINDING_MATRIX.md" className="underline text-zinc-200 hover:text-white">Protocol → Implementation Binding Matrix</a> and carries its <span className="font-mono text-zinc-300">invariant_id</span> + <span className="font-mono text-zinc-300">requirement_ids</span>. Unimplemented capabilities are reported honestly as <span className="font-mono text-zinc-300">NOT IMPLEMENTED</span>.
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
                 <Meta label="protocol_version" value={PROTOCOL_VERSION} />
                 <Meta label="verifier_version" value={VERIFIER_VERSION} />
                 <Meta label="bundle_version" value={String(BUNDLE_VERSION)} />
+                <Meta label="binding_matrix_version" value={String(BINDING_MATRIX_VERSION)} />
                 <Meta label="record_count" value={String(decisions.length)} />
             </div>
 
@@ -83,8 +84,10 @@ export default function Conformance() {
                     <table className="w-full text-sm" data-testid="conformance-table">
                         <thead>
                             <tr className="bg-zinc-950/50 text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-mono">
+                                <th className="text-left py-3 px-4 font-normal">Invariant</th>
                                 <th className="text-left py-3 px-4 font-normal">Test ID</th>
                                 <th className="text-left py-3 px-4 font-normal">Label</th>
+                                <th className="text-left py-3 px-4 font-normal">Requirements</th>
                                 <th className="text-left py-3 px-4 font-normal">Message</th>
                                 <th className="text-left py-3 px-4 font-normal">Status</th>
                             </tr>
@@ -92,8 +95,12 @@ export default function Conformance() {
                         <tbody className="divide-y divide-zinc-800/70">
                             {(suite?.tests || []).map((t) => (
                                 <tr key={t.id} data-testid={`conformance-row-${t.id}`}>
-                                    <td className="py-3 px-4 font-mono text-xs text-zinc-300">{t.id}</td>
+                                    <td className="py-3 px-4 font-mono text-xs text-zinc-200" data-testid={`conformance-invariant-${t.id}`}>{t.invariant_id || "—"}</td>
+                                    <td className="py-3 px-4 font-mono text-xs text-zinc-400">{t.id}</td>
                                     <td className="py-3 px-4 text-zinc-200">{t.label}</td>
+                                    <td className="py-3 px-4 font-mono text-[10px] text-zinc-400" data-testid={`conformance-requirements-${t.id}`}>
+                                        {(t.requirement_ids || []).join(", ") || "—"}
+                                    </td>
                                     <td className="py-3 px-4 text-xs text-zinc-400 max-w-md">{t.message}</td>
                                     <td className="py-3 px-4">
                                         <Badge variant="outline" className={`rounded-sm font-mono text-[10px] px-2 py-0.5 uppercase tracking-wider ${statusClass(t.status)}`} data-testid={`conformance-status-${t.id}`}>
