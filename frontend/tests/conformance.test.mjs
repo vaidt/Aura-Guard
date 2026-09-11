@@ -33,23 +33,24 @@ test("clean bundle → overall PASS with expected meta", async () => {
     assert.equal(s.protocol_version, PROTOCOL_VERSION);
     assert.equal(s.verifier_version, VERIFIER_VERSION);
     assert.ok(s.tests.some((t) => t.id === "impl:tamper-detection" && t.status === STATUS.PASS));
-    // NOT-IMPLEMENTED items must be explicit.
+    // Cross-impl: NOT_APPLICABLE when no second impl was spawned by caller.
     const ni = s.tests.find((x) => x.id === "impl:cross-implementation");
-    assert.equal(ni.status, STATUS.NOT_IMPLEMENTED, "impl:cross-implementation must be NOT IMPLEMENTED");
+    assert.equal(ni.status, STATUS.NOT_APPLICABLE, "impl:cross-implementation must be NOT APPLICABLE when no cross-impl result is provided");
     // Evidence portability is now PASS (verified independently by the CLI).
     assert.equal(
         s.tests.find((x) => x.id === "impl:evidence-portability").status,
         STATUS.PASS
     );
     // impl:attestation-signature is NOT APPLICABLE on a bundle without an
-    // attestation block (INV-ATT-01 v1.0). Cross-implementation stays NI.
+    // attestation block (INV-ATT-01 v1.0). Cross-implementation is
+    // NOT APPLICABLE here — the Node suite alone did not spawn Python.
     assert.equal(
         s.tests.find((x) => x.id === "impl:attestation-signature").status,
         STATUS.NOT_APPLICABLE
     );
     assert.equal(
         s.tests.find((x) => x.id === "impl:cross-implementation").status,
-        STATUS.NOT_IMPLEMENTED
+        STATUS.NOT_APPLICABLE
     );
 });
 

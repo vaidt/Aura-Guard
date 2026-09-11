@@ -213,12 +213,37 @@ export function checkEvidencePortability() {
     });
 }
 
-/** INV-XIM-01: cross-impl agreement is established out-of-band; NOT a runtime property. */
-export function checkCrossImplementation() {
+/** INV-XIM-01: cross-implementation agreement. PASS only when a live proof
+ * (out-of-process second implementation) has been supplied by the caller. */
+export function checkCrossImplementation(crossImplResult) {
+    if (!crossImplResult) {
+        return annotate("impl:cross-implementation", {
+            label: "Cross-implementation agreement",
+            status: STATUS.NOT_APPLICABLE,
+            message: "No second implementation was spawned in this runtime (browser or --no-cross-impl). Run /app/cli/aura-verify.mjs to obtain a live agreement proof.",
+        });
+    }
+    if (!crossImplResult.ran) {
+        return annotate("impl:cross-implementation", {
+            label: "Cross-implementation agreement",
+            status: STATUS.NOT_APPLICABLE,
+            message: `Second implementation not available: ${crossImplResult.reason || "unknown"}.`,
+        });
+    }
+    if (crossImplResult.agree) {
+        const n = (crossImplResult.compared_ids || []).length;
+        const other = crossImplResult.verifier_version || "second implementation";
+        return annotate("impl:cross-implementation", {
+            label: "Cross-implementation agreement",
+            status: STATUS.PASS,
+            message: `Live agreement: this verifier and ${other} produced identical status for ${n} common check ids.`,
+        });
+    }
+    const mm = (crossImplResult.mismatches || []).map((x) => `${x.id}:node=${x.this}!=other=${x.other}`).join("; ");
     return annotate("impl:cross-implementation", {
         label: "Cross-implementation agreement",
-        status: STATUS.NOT_IMPLEMENTED,
-        message: "Cross-implementation agreement is established out-of-band by /app/py_verifier/tests/test_cross_impl.py (Node CLI ↔ Python verifier). It is NOT a runtime property of a single verifier invocation.",
+        status: STATUS.FAIL,
+        message: `Live disagreement with ${crossImplResult.verifier_version || "second implementation"}: ${mm}`,
     });
 }
 
@@ -256,9 +281,10 @@ export async function checkAttestationSignature({ attestation, session, decision
  * @param {object} [params.session]              - Bundle.session (required to evaluate INV-ATT-01).
  * @param {object} [params.attestation]          - Bundle.attestation (optional).
  * @param {Array}  [params.registeredSigningKeys] - Trusted key registry (defaults to DEFAULT_SIGNING_KEY_REGISTRY).
+ * @param {object} [params.crossImplResult]     - Live cross-impl agreement result (from Node CLI).
  * @returns structured suite result.
  */
-export async function runConformanceSuite({ decisions, registeredPolicies, session, attestation, registeredSigningKeys }) {
+export async function runConformanceSuite({ decisions, registeredPolicies, session, attestation, registeredSigningKeys, crossImplResult }) {
     const now = new Date().toISOString();
     const meta = {
         protocol_version: PROTOCOL_VERSION,
@@ -296,7 +322,7 @@ export async function runConformanceSuite({ decisions, registeredPolicies, sessi
         checkTamperDetection(probe),
         checkNumericCanonicalization(),
         checkEvidencePortability(),
-        checkCrossImplementation(),
+        checkCrossImplementation(crossImplResult),
         attTest,
     ];
 

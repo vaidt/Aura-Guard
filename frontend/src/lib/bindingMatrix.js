@@ -6,7 +6,7 @@
  */
 
 export const BINDING_MATRIX = {
-    matrix_version: "1.2",
+    matrix_version: "1.3",
     protocol_version: "unspecified",
     status: "implementation-level",
     invariants: [
@@ -18,12 +18,11 @@ export const BINDING_MATRIX = {
         { id: "INV-TMP-01",  impl_check_id: "impl:tamper-detection",         check_function: "checkTamperDetection",         requirement_ids: ["REQ-TMP-01"],                              status: "IMPLEMENTED" },
         { id: "INV-FLT-01",  impl_check_id: "impl:numeric-canonicalization", check_function: "checkNumericCanonicalization", requirement_ids: ["REQ-FLT-01"],                              status: "IMPLEMENTED" },
         { id: "INV-POR-01",  impl_check_id: "impl:evidence-portability",     check_function: "checkEvidencePortability",     requirement_ids: ["REQ-POR-01"],                              status: "IMPLEMENTED" },
-        { id: "INV-XIM-01",  impl_check_id: "impl:cross-implementation",     check_function: "checkCrossImplementation",     requirement_ids: ["REQ-XIM-01"],                              status: "NOT_IMPLEMENTED_AT_RUNTIME" },
+        { id: "INV-XIM-01",  impl_check_id: "impl:cross-implementation",     check_function: "checkCrossImplementation",     requirement_ids: ["REQ-XIM-01"],                              status: "IMPLEMENTED" },
         { id: "INV-ATT-01",  impl_check_id: "impl:attestation-signature",    check_function: "checkAttestationSignature",    requirement_ids: ["REQ-ATT-01"],                              status: "IMPLEMENTED" },
     ],
 };
 
-/** Look up an invariant by its `impl:*` id. Returns null if not present. */
 export function invariantForCheckId(implCheckId) {
     return BINDING_MATRIX.invariants.find((r) => r.impl_check_id === implCheckId) || null;
 }

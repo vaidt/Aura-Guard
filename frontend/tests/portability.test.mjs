@@ -60,11 +60,13 @@ test("positive portability: export → CLI → PASS (exit 0)", async () => {
     const suite = JSON.parse(out.stdout);
     assert.equal(suite.overall, STATUS.PASS);
     assert.equal(suite.record_count, SAMPLE_SESSION.decisions.length);
-    // impl:cross-implementation must remain NOT_IMPLEMENTED at runtime.
-    // impl:attestation-signature is NOT_APPLICABLE (no attestation attached).
+    // With the default CLI flow (cross-impl ON), impl:cross-implementation
+    // must PASS on a clean bundle (Node ↔ Python agree per-test).
+    // impl:attestation-signature is NOT_APPLICABLE (bundle un-attested).
     assert.equal(
         suite.tests.find((x) => x.id === "impl:cross-implementation").status,
-        STATUS.NOT_IMPLEMENTED
+        STATUS.PASS,
+        "cross-impl must be live PASS on a clean bundle via the default CLI"
     );
     assert.equal(
         suite.tests.find((x) => x.id === "impl:attestation-signature").status,
@@ -98,7 +100,8 @@ test("CLI/UI agreement: same bundle produces identical per-test statuses", async
         decisions: bundle.session.decisions,
         registeredPolicies: new Set(bundle.session.registered_policy_versions || []),
     });
-    const cli = withTempFile(bundle, (p) => runCli([p, "--json"]));
+    // Ask the CLI to skip cross-impl so the comparison is UI-equivalent.
+    const cli = withTempFile(bundle, (p) => runCli([p, "--json", "--no-cross-impl"]));
     assert.equal(cli.code, 0);
     const cliSuite = JSON.parse(cli.stdout);
     assert.equal(cliSuite.overall, uiSuite.overall);

@@ -34,7 +34,7 @@ def clean_bundle_path(tmp_path_factory):
 
 
 def node_run(path):
-    r = subprocess.run(["node", str(NODE_CLI), str(path), "--json"], capture_output=True, text=True)
+    r = subprocess.run(["node", str(NODE_CLI), str(path), "--json", "--no-cross-impl"], capture_output=True, text=True)
     return r.returncode, json.loads(r.stdout) if r.stdout.strip() else None, r.stderr
 
 
@@ -45,7 +45,12 @@ def py_run(path):
 
 def _agree(a, b):
     assert a["overall"] == b["overall"], f"overall mismatch: {a['overall']} vs {b['overall']}"
-    ids = {t["id"] for t in a["tests"]} & {t["id"] for t in b["tests"]}
+    # impl:cross-implementation is inherently local to each verifier (Node
+    # spawns Python, Python cannot spawn itself), so it's excluded from
+    # cross-agreement — matches /app/frontend/tests/crossImpl.test.mjs.
+    a_ids = {t["id"] for t in a["tests"]}
+    b_ids = {t["id"] for t in b["tests"]}
+    ids = (a_ids & b_ids) - {"impl:cross-implementation"}
     for tid in ids:
         sa = next(t["status"] for t in a["tests"] if t["id"] == tid)
         sb = next(t["status"] for t in b["tests"] if t["id"] == tid)
@@ -94,7 +99,7 @@ def test_read_only_byte_equality(clean_bundle_path):
 
 def test_malformed_bundle_both_reject(tmp_path):
     bad = tmp_path / "bad.json"; bad.write_text(json.dumps({"nope": True}))
-    r = subprocess.run(["node", str(NODE_CLI), str(bad), "--json"], capture_output=True, text=True)
+    r = subprocess.run(["node", str(NODE_CLI), str(bad), "--json", "--no-cross-impl"], capture_output=True, text=True)
     assert r.returncode == 2
     with pytest.raises(Exception):
         py_run(bad)

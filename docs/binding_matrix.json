@@ -1,6 +1,6 @@
 {
   "$schema_note": "Non-normative machine-readable binding matrix. Consumed by /app/frontend/src/lib/conformanceCore.js and validated by /app/frontend/tests/bindingMatrix.test.mjs.",
-  "matrix_version": "1.2",
+  "matrix_version": "1.3",
   "protocol_version": "unspecified",
   "status": "implementation-level",
   "generated_at": "2026-02-02",
@@ -141,15 +141,15 @@
       "id": "INV-XIM-01",
       "category": "cross-implementation",
       "requirement_ids": ["REQ-XIM-01"],
-      "statement": "Two independent verifier implementations (Node ESM + Python stdlib) MUST produce the same overall result and the same per-test status for every bundle in the parametric mutation matrix.",
+      "statement": "Two independent verifier implementations (Node ESM + Python stdlib) MUST produce the same per-test status for every common check id (excluding `impl:cross-implementation` itself) on the same bundle.",
       "impl_check_id": "impl:cross-implementation",
       "check_function": "checkCrossImplementation",
       "evidence_test_files": [
         "/app/py_verifier/tests/test_cross_impl.py",
-        "/app/py_verifier/tests/test_numeric_canonicalization.py"
+        "/app/frontend/tests/crossImpl.test.mjs"
       ],
-      "status": "NOT_IMPLEMENTED_AT_RUNTIME",
-      "note": "Cross-implementation agreement is established out-of-band by parametric test matrices; it is NOT a runtime property of a single verifier invocation and is therefore honestly reported NOT IMPLEMENTED by any single verifier."
+      "status": "IMPLEMENTED",
+      "note": "Live runtime proof: the Node CLI spawns the Python reference verifier, compares per-test statuses, and reports PASS/FAIL/NOT APPLICABLE. Browser runtime and `--no-cross-impl` report NOT APPLICABLE (honest — the second implementation was not run)."
     },
     {
       "id": "INV-ATT-01",
