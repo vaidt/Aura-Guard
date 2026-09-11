@@ -189,14 +189,17 @@ export default function Report() {
                     <p className="text-[12px] text-zinc-700 mt-2 leading-relaxed">
                         Report values are produced by the Conformance Core (implementation-level, non-normative)
                         wrapping a read-only verifier. The verifier re-derives canonical representations using
-                        deterministic RFC-8785-flavoured JSON canonicalization, recomputes SHA-256 digests, and
-                        verifies hash-chain continuity across the session. Stored evidence is never mutated.
+                        deterministic RFC-8785-flavoured JSON canonicalization with the ES-NumberToString
+                        numeric rule (INV-FLT-01), recomputes SHA-256 digests, and verifies hash-chain
+                        continuity across the session. Stored evidence is never mutated. Cryptographic
+                        attestation (INV-ATT-01) uses Ed25519 (RFC 8032) over the re-derived final chain hash,
+                        verified against an out-of-band trusted key registry.
                     </p>
                     <p className="text-[11px] text-zinc-500 mt-3 italic">
                         Aura-Guard is a Conformance &amp; Evidence Console demonstrator. It is not a certified
                         compliance product and does not constitute an EU AI Act, SOC 2, ISO 27001 or any other
-                        regulatory attestation. Signature / attestation-signing, evidence portability and
-                        cross-implementation agreement tests are reported as NOT IMPLEMENTED in this phase.
+                        regulatory attestation. Cross-implementation agreement is reported NOT IMPLEMENTED at
+                        runtime (established out-of-band by the parametric test matrix).
                     </p>
                     <div className="grid grid-cols-2 gap-6 mt-6">
                         <div className="border-t border-zinc-400 pt-1 text-[11px] font-mono text-zinc-700">

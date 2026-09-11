@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useMemo, useState, useCall
 import { SAMPLE_SESSION, REGISTERED_POLICY_VERSIONS } from "@/lib/sampleData";
 import { buildHashChain, verifySession } from "@/lib/verification";
 import { hasFullEvidence } from "@/lib/format";
+import { signAttestation } from "@/lib/attestation";
+import { DEMO_KEY_ID, DEMO_PUBLIC_KEY_HEX, DEMO_PRIVATE_KEY_HEX } from "@/lib/demoKeys";
 
 const AuditContext = createContext(null);
 
@@ -31,6 +33,7 @@ export function AuditProvider({ children }) {
     const [rawSession, setRawSession] = useState(null);
     const [session, setSession] = useState(null);
     const [decisions, setDecisions] = useState([]);
+    const [attestation, setAttestation] = useState(null);
     const [tampered, setTampered] = useState(false);
     const [loading, setLoading] = useState(true);
     const [verification, setVerification] = useState(null);
@@ -61,9 +64,33 @@ export function AuditProvider({ children }) {
         setRawSession(raw);
         setSession(meta);
         setDecisions(chained);
+        // Preserve imported attestation; drop stale attestation on reload.
+        setAttestation(raw.attestation && typeof raw.attestation === "object" ? raw.attestation : null);
         setTampered(false);
         setLoading(false);
     }, []);
+
+    // Auto-attest the built-in sample bundle so the demo showcases a PASS
+    // path on INV-ATT-01 out-of-the-box. User-imported bundles keep their
+    // own attestation (or NOT_APPLICABLE if absent).
+    const attestCurrentSession = useCallback(async () => {
+        if (!session || decisions.length === 0) return null;
+        try {
+            const att = await signAttestation({
+                session,
+                decisions,
+                key_id: DEMO_KEY_ID,
+                priv_hex: DEMO_PRIVATE_KEY_HEX,
+                pub_hex: DEMO_PUBLIC_KEY_HEX,
+            });
+            setAttestation(att);
+            return att;
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn("attest failed (Ed25519 signing unavailable):", e.message);
+            return null;
+        }
+    }, [session, decisions]);
 
     useEffect(() => {
         loadSession(SAMPLE_SESSION).catch((e) => {
@@ -72,6 +99,22 @@ export function AuditProvider({ children }) {
             setLoading(false);
         });
     }, [loadSession]);
+
+    // Auto-attest the sample bundle exactly once, when it has just been
+    // loaded and no attestation is present (i.e. this is our built-in sample,
+    // not a user-imported already-attested bundle).
+    const autoAttestedFor = useRef(null);
+    useEffect(() => {
+        if (loading) return;
+        if (!session || decisions.length === 0) return;
+        if (attestation) return;
+        // Only auto-attest untampered sessions to avoid signing garbage.
+        if (tampered) return;
+        const key = session?.session_id || "__sample__";
+        if (autoAttestedFor.current === key) return;
+        autoAttestedFor.current = key;
+        attestCurrentSession();
+    }, [loading, session, decisions, attestation, tampered, attestCurrentSession]);
 
     useEffect(() => {
         if (!decisions.length) {
@@ -105,6 +148,10 @@ export function AuditProvider({ children }) {
                 return copy;
             })
         );
+        // Any tamper stales the existing attestation; the payload no longer
+        // matches, so the attestation check will (correctly) flip to FAIL if
+        // we kept it, or NOT_APPLICABLE if we drop it. We KEEP it so users
+        // can see the FAIL demonstrably.
         setTampered(true);
     }, []);
 
@@ -143,6 +190,8 @@ export function AuditProvider({ children }) {
         importSession,
         registeredPolicies,
         importedHadEvidence: importedHadEvidence.current,
+        attestation,
+        attestCurrentSession,
     };
 
     return <AuditContext.Provider value={value}>{children}</AuditContext.Provider>;

@@ -34,14 +34,22 @@ test("clean bundle → overall PASS with expected meta", async () => {
     assert.equal(s.verifier_version, VERIFIER_VERSION);
     assert.ok(s.tests.some((t) => t.id === "impl:tamper-detection" && t.status === STATUS.PASS));
     // NOT-IMPLEMENTED items must be explicit.
-    for (const id of ["impl:cross-implementation", "impl:attestation-signature"]) {
-        const t = s.tests.find((x) => x.id === id);
-        assert.equal(t.status, STATUS.NOT_IMPLEMENTED, `${id} must be NOT IMPLEMENTED`);
-    }
+    const ni = s.tests.find((x) => x.id === "impl:cross-implementation");
+    assert.equal(ni.status, STATUS.NOT_IMPLEMENTED, "impl:cross-implementation must be NOT IMPLEMENTED");
     // Evidence portability is now PASS (verified independently by the CLI).
     assert.equal(
         s.tests.find((x) => x.id === "impl:evidence-portability").status,
         STATUS.PASS
+    );
+    // impl:attestation-signature is NOT APPLICABLE on a bundle without an
+    // attestation block (INV-ATT-01 v1.0). Cross-implementation stays NI.
+    assert.equal(
+        s.tests.find((x) => x.id === "impl:attestation-signature").status,
+        STATUS.NOT_APPLICABLE
+    );
+    assert.equal(
+        s.tests.find((x) => x.id === "impl:cross-implementation").status,
+        STATUS.NOT_IMPLEMENTED
     );
 });
 

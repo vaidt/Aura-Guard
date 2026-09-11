@@ -126,6 +126,8 @@ async function main() {
     const suite = await runConformanceSuite({
         decisions: bundle.session.decisions,
         registeredPolicies,
+        session: bundle.session,
+        attestation: bundle.attestation,
     });
     // Strip the heavy session_verification detail for a clean CLI JSON output.
     const output = { ...suite, session_verification: undefined };

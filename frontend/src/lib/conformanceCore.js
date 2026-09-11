@@ -27,6 +27,8 @@ import { canonicalize, sha256Hex, verifySession, verifyDecision } from "./verifi
 import { canonicalNumberString, CANONICAL_NUMBER_VECTORS } from "./canonicalNumber.js";
 import { hasFullEvidence } from "./format.js";
 import { BINDING_MATRIX, invariantForCheckId } from "./bindingMatrix.js";
+import { verifyAttestation } from "./attestation.js";
+import { DEFAULT_SIGNING_KEY_REGISTRY } from "./signingKeys.js";
 
 export const PROTOCOL_VERSION = "unspecified"; // No normative spec supplied.
 export const VERIFIER_VERSION = "aura-guard-conformance-core/0.3.0";
@@ -220,12 +222,28 @@ export function checkCrossImplementation() {
     });
 }
 
-/** INV-ATT-01: no normative signature specification supplied. */
-export function checkAttestationSignature() {
+/** INV-ATT-01: verify an optional Ed25519 attestation against a trusted registry. */
+export async function checkAttestationSignature({ attestation, session, decisions, registry }) {
+    if (!attestation) {
+        return annotate("impl:attestation-signature", {
+            label: "Attestation signature",
+            status: STATUS.NOT_APPLICABLE,
+            message: "No attestation block present in the bundle; nothing to verify. Attach one via /app/cli/aura-sign.mjs to move this to PASS.",
+        });
+    }
+    const r = await verifyAttestation({
+        attestation,
+        session,
+        decisions,
+        registry: registry || DEFAULT_SIGNING_KEY_REGISTRY,
+    });
     return annotate("impl:attestation-signature", {
         label: "Attestation signature",
-        status: STATUS.NOT_IMPLEMENTED,
-        message: "No cryptographic signature specification supplied. Signature scheme, key lifecycle, and canonical payload for signing are undefined.",
+        status: r.pass ? STATUS.PASS : STATUS.FAIL,
+        message: r.pass
+            ? `INV-ATT-01: Ed25519 signature verified against ${r.key_id} at ${r.signed_at}.`
+            : `INV-ATT-01 FAIL (${r.code}): ${r.detail}`,
+        code: r.code,
     });
 }
 
@@ -235,9 +253,12 @@ export function checkAttestationSignature() {
  * @param {object} params
  * @param {Array}  params.decisions              - Decision records (with evidence).
  * @param {Set}    params.registeredPolicies     - Registered policy versions.
+ * @param {object} [params.session]              - Bundle.session (required to evaluate INV-ATT-01).
+ * @param {object} [params.attestation]          - Bundle.attestation (optional).
+ * @param {Array}  [params.registeredSigningKeys] - Trusted key registry (defaults to DEFAULT_SIGNING_KEY_REGISTRY).
  * @returns structured suite result.
  */
-export async function runConformanceSuite({ decisions, registeredPolicies }) {
+export async function runConformanceSuite({ decisions, registeredPolicies, session, attestation, registeredSigningKeys }) {
     const now = new Date().toISOString();
     const meta = {
         protocol_version: PROTOCOL_VERSION,
@@ -262,6 +283,8 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
     const v = await verifySession(decisions, registeredPolicies);
     // Runtime tamper probe on isolated clone (not derived from v.allPass).
     const probe = await tamperProbe(decisions, registeredPolicies);
+    // INV-ATT-01 attestation check (may be NOT_APPLICABLE when absent).
+    const attTest = await checkAttestationSignature({ attestation, session, decisions, registry: registeredSigningKeys });
 
     // Emit tests in matrix order.
     const tests = [
@@ -274,7 +297,7 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
         checkNumericCanonicalization(),
         checkEvidencePortability(),
         checkCrossImplementation(),
-        checkAttestationSignature(),
+        attTest,
     ];
 
     const overall = tests.some((t) => t.status === STATUS.FAIL)

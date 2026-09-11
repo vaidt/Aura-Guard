@@ -41,7 +41,7 @@ and validated by
 | `INV-FLT-01` | `REQ-FLT-01` | canonicalization-numeric | Every finite IEEE-754 double is serialized by ECMAScript §6.1.6.1.13 `Number::toString` (bit-exact across JS and Python). `NaN`, `+Infinity`, `-Infinity` are REJECTED. See [`INV_FLT_01_NUMERIC_CANONICALIZATION.md`](./INV_FLT_01_NUMERIC_CANONICALIZATION.md). | `impl:numeric-canonicalization` | `checkNumericCanonicalization` | IMPLEMENTED |
 | `INV-POR-01` | `REQ-POR-01` | portability | Exported bundle is independently verified by Node CLI (`/app/cli/aura-verify.mjs`) and Python verifier (`/app/py_verifier/aura_verify.py`) with byte-identical bundle file after verification. | `impl:evidence-portability` | `checkEvidencePortability` | IMPLEMENTED |
 | `INV-XIM-01` | `REQ-XIM-01` | cross-implementation | Node and Python verifiers produce identical per-test status for every bundle in the parametric mutation matrix. | `impl:cross-implementation` | `checkCrossImplementation` | NOT_IMPLEMENTED (runtime) |
-| `INV-ATT-01` | `REQ-ATT-01` | attestation | Signature over a canonical attestation payload verifies against a registered key. | `impl:attestation-signature` | `checkAttestationSignature` | NOT_IMPLEMENTED |
+| `INV-ATT-01` | `REQ-ATT-01` | attestation | Ed25519 signature over the canonical attestation payload verifies against a public key registered as `active` in the trusted out-of-band registry, within its validity window; revoked keys reject regardless of `signed_at`. See [`INV_ATT_01_ATTESTATION_SIGNATURE.md`](./INV_ATT_01_ATTESTATION_SIGNATURE.md). | `impl:attestation-signature` | `checkAttestationSignature` | IMPLEMENTED |
 
 ## Requirements (informal, IMPL-scoped)
 
@@ -58,7 +58,7 @@ and validated by
 - **REQ-FLT-01** — Float canonicalization MUST be bit-exact across implementations. *(Locked to ECMAScript `Number::toString`; non-finite numbers REJECTED.)*
 - **REQ-POR-01** — An exported evidence bundle MUST be verifiable by at least one implementation independent of the producer, without mutation of the bundle file.
 - **REQ-XIM-01** — Two independent implementations MUST agree on the per-test result for every bundle in a shared mutation matrix.
-- **REQ-ATT-01** — An attestation signature scheme MUST be specified and verifiable. *(Awaiting normative spec.)*
+- **REQ-ATT-01** — An attestation signature over a canonical payload MUST verify against a public key that is registered, `active`, non-revoked, and inside its validity window at `signed_at`. *(Ed25519, RFC 8032.)*
 
 ## Verification model (summary)
 

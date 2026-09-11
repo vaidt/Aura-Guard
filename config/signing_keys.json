@@ -1,0 +1,24 @@
+{
+  "$schema_note": "Aura-Guard demo signing key registry. Public keys only. Consumed by Node CLI, Python verifier, and (by mirror) the JS Conformance Core. DEMO ONLY — do not use in production.",
+  "registry_version": "1.0",
+  "keys": [
+    {
+      "key_id": "aura-key-2026Q1-demo-001",
+      "algorithm": "ed25519",
+      "public_key_hex": "77b32cb4e8795e28e96a1f1621d73ed08e1903507434080a853e85d60f70ad06",
+      "status": "active",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2027-01-01T00:00:00Z",
+      "note": "DEMO KEY — do not use in production."
+    },
+    {
+      "key_id": "aura-key-2025-revoked-demo-001",
+      "algorithm": "ed25519",
+      "public_key_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "status": "revoked",
+      "valid_from": "2025-01-01T00:00:00Z",
+      "valid_until": "2026-01-01T00:00:00Z",
+      "note": "DEMO REVOKED KEY — used by tests to prove revocation rejection."
+    }
+  ]
+}

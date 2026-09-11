@@ -6,7 +6,7 @@
  */
 
 export const BINDING_MATRIX = {
-    matrix_version: "1.1",
+    matrix_version: "1.2",
     protocol_version: "unspecified",
     status: "implementation-level",
     invariants: [
@@ -19,7 +19,7 @@ export const BINDING_MATRIX = {
         { id: "INV-FLT-01",  impl_check_id: "impl:numeric-canonicalization", check_function: "checkNumericCanonicalization", requirement_ids: ["REQ-FLT-01"],                              status: "IMPLEMENTED" },
         { id: "INV-POR-01",  impl_check_id: "impl:evidence-portability",     check_function: "checkEvidencePortability",     requirement_ids: ["REQ-POR-01"],                              status: "IMPLEMENTED" },
         { id: "INV-XIM-01",  impl_check_id: "impl:cross-implementation",     check_function: "checkCrossImplementation",     requirement_ids: ["REQ-XIM-01"],                              status: "NOT_IMPLEMENTED_AT_RUNTIME" },
-        { id: "INV-ATT-01",  impl_check_id: "impl:attestation-signature",    check_function: "checkAttestationSignature",    requirement_ids: ["REQ-ATT-01"],                              status: "NOT_IMPLEMENTED" },
+        { id: "INV-ATT-01",  impl_check_id: "impl:attestation-signature",    check_function: "checkAttestationSignature",    requirement_ids: ["REQ-ATT-01"],                              status: "IMPLEMENTED" },
     ],
 };
 

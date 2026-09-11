@@ -60,11 +60,16 @@ test("positive portability: export → CLI → PASS (exit 0)", async () => {
     const suite = JSON.parse(out.stdout);
     assert.equal(suite.overall, STATUS.PASS);
     assert.equal(suite.record_count, SAMPLE_SESSION.decisions.length);
-    // NOT-IMPLEMENTED items must remain honestly reported.
-    for (const id of ["impl:attestation-signature", "impl:cross-implementation"]) {
-        const t = suite.tests.find((x) => x.id === id);
-        assert.equal(t.status, STATUS.NOT_IMPLEMENTED);
-    }
+    // impl:cross-implementation must remain NOT_IMPLEMENTED at runtime.
+    // impl:attestation-signature is NOT_APPLICABLE (no attestation attached).
+    assert.equal(
+        suite.tests.find((x) => x.id === "impl:cross-implementation").status,
+        STATUS.NOT_IMPLEMENTED
+    );
+    assert.equal(
+        suite.tests.find((x) => x.id === "impl:attestation-signature").status,
+        STATUS.NOT_APPLICABLE
+    );
 });
 
 test("negative portability: tampered exported bundle → CLI → FAIL (exit 1)", async () => {

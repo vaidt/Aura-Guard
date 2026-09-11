@@ -1,6 +1,6 @@
 {
   "$schema_note": "Non-normative machine-readable binding matrix. Consumed by /app/frontend/src/lib/conformanceCore.js and validated by /app/frontend/tests/bindingMatrix.test.mjs.",
-  "matrix_version": "1.1",
+  "matrix_version": "1.2",
   "protocol_version": "unspecified",
   "status": "implementation-level",
   "generated_at": "2026-02-02",
@@ -8,11 +8,16 @@
     "schema_doc": "/app/docs/BUNDLE_SCHEMA.md",
     "binding_doc": "/app/docs/BINDING_MATRIX.md",
     "flt_doc": "/app/docs/INV_FLT_01_NUMERIC_CANONICALIZATION.md",
+    "att_doc": "/app/docs/INV_ATT_01_ATTESTATION_SIGNATURE.md",
     "canonicalizer_js": "/app/frontend/src/lib/verification.js",
     "canonical_number_js": "/app/frontend/src/lib/canonicalNumber.js",
+    "attestation_js": "/app/frontend/src/lib/attestation.js",
     "canonicalizer_py": "/app/py_verifier/aura_verify.py",
+    "ed25519_ref_py": "/app/py_verifier/ed25519_ref.py",
+    "signing_keys_registry": "/app/config/signing_keys.json",
     "conformance_core_js": "/app/frontend/src/lib/conformanceCore.js",
-    "node_cli": "/app/cli/aura-verify.mjs"
+    "node_cli_verify": "/app/cli/aura-verify.mjs",
+    "node_cli_sign": "/app/cli/aura-sign.mjs"
   },
   "notes": [
     "Requirement IDs are IMPL-scoped (REQ-*-*) until a normative Aura Protocol specification is supplied.",
@@ -150,11 +155,13 @@
       "id": "INV-ATT-01",
       "category": "attestation",
       "requirement_ids": ["REQ-ATT-01"],
-      "statement": "An attestation signature over a canonical attestation payload MUST verify against a registered verifying key.",
+      "statement": "An attestation signature over a canonical attestation payload MUST verify against a public key that is registered as active in the trusted out-of-band registry and whose validity window brackets `signed_at`. Revoked keys MUST fail regardless of timestamp.",
       "impl_check_id": "impl:attestation-signature",
       "check_function": "checkAttestationSignature",
-      "status": "NOT_IMPLEMENTED",
-      "note": "No normative signature scheme, key lifecycle, or canonical attestation payload has been specified. Deliberately reported NOT IMPLEMENTED and never PASS."
+      "algorithm": "ed25519",
+      "spec_doc": "/app/docs/INV_ATT_01_ATTESTATION_SIGNATURE.md",
+      "status": "IMPLEMENTED",
+      "note": "Reported NOT APPLICABLE when the bundle has no attestation block; PASS/FAIL when present."
     }
   ]
 }

@@ -58,6 +58,24 @@ Extra keys on `session` are tolerated and passed through unchanged; they do not 
 | `chain_hash`                | string | yes      | Hex SHA-256 of `prev_hash \|\| canonical_hash`.                                                            | Must equal `sha256Hex(prev_hash + canonical_hash)` on re-derivation.                                           | Yes             | Stored (re-derived) |
 | `policy_version`            | string | optional | Redundant echo of the record's `policy_version`.                                                           | If present, string.                                                                                            | No              | Stored           |
 
+## `attestation` object (optional, top-level)
+
+Present when the bundle has been Ed25519-attested by a signer whose public key is
+registered in the trusted out-of-band registry (see
+[`INV_ATT_01_ATTESTATION_SIGNATURE.md`](./INV_ATT_01_ATTESTATION_SIGNATURE.md)).
+Absence → `impl:attestation-signature` is reported `NOT APPLICABLE`.
+
+| Field                 | Type   | Required | Meaning                                                                              | Validation                                                                        |
+|-----------------------|--------|----------|--------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| `attestation_version` | string | yes      | Attestation format version.                                                          | Must equal `"1.0"`.                                                               |
+| `algorithm`           | string | yes      | Signature algorithm.                                                                 | Must equal `"ed25519"`.                                                           |
+| `key_id`              | string | yes      | Signing key identifier.                                                              | Must resolve to an active, non-revoked entry in the trusted registry.             |
+| `signed_at`           | string | yes      | RFC 3339 UTC timestamp.                                                              | Must be inside `[valid_from, valid_until]` of the registry entry for `key_id`.    |
+| `signed_payload`      | string | yes      | Canonical JSON string that was signed.                                               | Must byte-equal the re-derived canonical payload from the current bundle.         |
+| `signature`           | string | yes      | Hex Ed25519 signature (128 hex chars, 64 raw bytes).                                 | Must Ed25519-verify against `entry.public_key_hex` over UTF-8(`signed_payload`).  |
+
+The trusted key registry is NEVER carried inside the bundle.
+
 \* `canonical_representation` is present in bundles produced by this implementation. Its storage is **implementation-defined and pending normative Aura specification** — a future normative schema may require it, forbid it, or redefine its shape.
 
 ## Verification model (summary)

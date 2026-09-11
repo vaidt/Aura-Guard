@@ -20,17 +20,17 @@ function statusClass(s) {
 }
 
 export default function Conformance() {
-    const { decisions, registeredPolicies } = useAudit();
+    const { decisions, registeredPolicies, session, attestation } = useAudit();
     const [suite, setSuite] = useState(null);
 
     useEffect(() => {
         if (!decisions.length) return;
         let cancelled = false;
-        runConformanceSuite({ decisions, registeredPolicies }).then((s) => {
+        runConformanceSuite({ decisions, registeredPolicies, session, attestation }).then((s) => {
             if (!cancelled) setSuite(s);
         });
         return () => { cancelled = true; };
-    }, [decisions, registeredPolicies]);
+    }, [decisions, registeredPolicies, session, attestation]);
 
     return (
         <div className="space-y-8">
