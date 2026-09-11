@@ -1,13 +1,15 @@
 {
   "$schema_note": "Non-normative machine-readable binding matrix. Consumed by /app/frontend/src/lib/conformanceCore.js and validated by /app/frontend/tests/bindingMatrix.test.mjs.",
-  "matrix_version": "1.0",
+  "matrix_version": "1.1",
   "protocol_version": "unspecified",
   "status": "implementation-level",
-  "generated_at": "2026-02-01",
+  "generated_at": "2026-02-02",
   "authorities": {
     "schema_doc": "/app/docs/BUNDLE_SCHEMA.md",
     "binding_doc": "/app/docs/BINDING_MATRIX.md",
+    "flt_doc": "/app/docs/INV_FLT_01_NUMERIC_CANONICALIZATION.md",
     "canonicalizer_js": "/app/frontend/src/lib/verification.js",
+    "canonical_number_js": "/app/frontend/src/lib/canonicalNumber.js",
     "canonicalizer_py": "/app/py_verifier/aura_verify.py",
     "conformance_core_js": "/app/frontend/src/lib/conformanceCore.js",
     "node_cli": "/app/cli/aura-verify.mjs"
@@ -47,7 +49,7 @@
       ],
       "status": "IMPLEMENTED",
       "caveats": [
-        "Canonicalization is JCS-lite (sorted keys, in-order arrays, no whitespace, JSON string encoding). Pending normative Aura specification (RFC 8785 or equivalent)."
+        "Canonicalization is JCS-lite (sorted keys, in-order arrays, no whitespace, JSON string encoding). Numeric serialization is pinned by INV-FLT-01. Pending normative Aura specification (RFC 8785 or equivalent)."
       ]
     },
     {
@@ -105,6 +107,18 @@
       "note": "This is a runtime probe, not a static assertion; PASS iff the real verifier detects the mutation."
     },
     {
+      "id": "INV-FLT-01",
+      "category": "canonicalization-numeric",
+      "requirement_ids": ["REQ-FLT-01"],
+      "statement": "Every finite IEEE-754 double MUST be serialized by ECMAScript §6.1.6.1.13 Number::toString (bit-exact). NaN, +Infinity, -Infinity MUST be rejected (canonicalizer MUST throw). See /app/docs/INV_FLT_01_NUMERIC_CANONICALIZATION.md.",
+      "impl_check_id": "impl:numeric-canonicalization",
+      "check_function": "checkNumericCanonicalization",
+      "reference_vectors_js": "/app/frontend/src/lib/canonicalNumber.js#CANONICAL_NUMBER_VECTORS",
+      "reference_vectors_py": "/app/py_verifier/aura_verify.py#CANONICAL_NUMBER_VECTORS",
+      "status": "IMPLEMENTED",
+      "note": "Runtime fixture-based probe. Cross-implementation parity is additionally asserted by /app/py_verifier/tests/test_numeric_canonicalization.py."
+    },
+    {
       "id": "INV-POR-01",
       "category": "portability",
       "requirement_ids": ["REQ-POR-01"],
@@ -126,10 +140,11 @@
       "impl_check_id": "impl:cross-implementation",
       "check_function": "checkCrossImplementation",
       "evidence_test_files": [
-        "/app/py_verifier/tests/test_cross_impl.py"
+        "/app/py_verifier/tests/test_cross_impl.py",
+        "/app/py_verifier/tests/test_numeric_canonicalization.py"
       ],
       "status": "NOT_IMPLEMENTED_AT_RUNTIME",
-      "note": "Cross-implementation agreement is established out-of-band by the parametric test matrix; it is NOT a runtime property of a single verifier invocation and is therefore honestly reported NOT IMPLEMENTED by any single verifier."
+      "note": "Cross-implementation agreement is established out-of-band by parametric test matrices; it is NOT a runtime property of a single verifier invocation and is therefore honestly reported NOT IMPLEMENTED by any single verifier."
     },
     {
       "id": "INV-ATT-01",
@@ -140,16 +155,6 @@
       "check_function": "checkAttestationSignature",
       "status": "NOT_IMPLEMENTED",
       "note": "No normative signature scheme, key lifecycle, or canonical attestation payload has been specified. Deliberately reported NOT IMPLEMENTED and never PASS."
-    },
-    {
-      "id": "INV-FLT-01",
-      "category": "canonicalization-gap",
-      "requirement_ids": ["REQ-FLT-01"],
-      "statement": "Floating-point numeric canonicalization MUST be bit-exact across all conforming implementations for the same JSON numeric input.",
-      "impl_check_id": null,
-      "check_function": null,
-      "status": "NOT_IMPLEMENTED",
-      "note": "Declared gap. Current sample data uses integer-safe values only; JS JSON.stringify and Python json.dumps may diverge on non-decimal floats (e.g. 0.1). Cannot be claimed as PASS until a normative Aura canonicalization spec fixes the numeric representation."
     }
   ]
 }

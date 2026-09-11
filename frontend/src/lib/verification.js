@@ -9,10 +9,16 @@
  *   NOTE (R2): storing `canonical_representation` inside evidence is an
  *   IMPLEMENTATION-DEFINED choice at this stage, PENDING the normative Aura
  *   Protocol specification. See /app/docs/BUNDLE_SCHEMA.md.
+ *   NUMERIC RULE (INV-FLT-01): all JS Numbers are serialized via
+ *   canonicalNumberString() → ECMAScript §6.1.6.1.13 Number::toString.
+ *   Non-finite numbers are REJECTED (throw). See
+ *   /app/docs/INV_FLT_01_NUMERIC_CANONICALIZATION.md.
  * - sha256Hex(): SHA-256 hash via the browser SubtleCrypto API.
  * - buildHashChain(): computes canonical hash + chained hash for each decision.
  * - verifyDecision(): re-derives hashes and compares to the stored evidence.
  */
+
+import { canonicalNumberString } from "./canonicalNumber.js";
 
 const GENESIS_HASH = "0".repeat(64);
 
@@ -22,21 +28,29 @@ const GENESIS_HASH = "0".repeat(64);
  * - Arrays preserved in-order (order is semantic in audit logs).
  * - No whitespace.
  * - Strings JSON.stringify-encoded (proper escapes).
+ * - Numbers serialized per INV-FLT-01 (ECMAScript Number::toString);
+ *   non-finite numbers are rejected with a thrown Error.
  */
 export function canonicalize(value) {
-    if (value === null || typeof value !== "object") {
-        return JSON.stringify(value);
-    }
+    if (value === null) return "null";
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "number") return canonicalNumberString(value);
+    if (typeof value === "string") return JSON.stringify(value);
     if (Array.isArray(value)) {
         return "[" + value.map((v) => canonicalize(v)).join(",") + "]";
     }
-    const keys = Object.keys(value).sort();
-    return (
-        "{" +
-        keys
-            .map((k) => JSON.stringify(k) + ":" + canonicalize(value[k]))
-            .join(",") +
-        "}"
+    if (typeof value === "object") {
+        const keys = Object.keys(value).sort();
+        return (
+            "{" +
+            keys
+                .map((k) => JSON.stringify(k) + ":" + canonicalize(value[k]))
+                .join(",") +
+            "}"
+        );
+    }
+    throw new Error(
+        `canonicalize: unsupported value type ${typeof value}`
     );
 }
 

@@ -24,6 +24,7 @@
  */
 
 import { canonicalize, sha256Hex, verifySession, verifyDecision } from "./verification.js";
+import { canonicalNumberString, CANONICAL_NUMBER_VECTORS } from "./canonicalNumber.js";
 import { hasFullEvidence } from "./format.js";
 import { BINDING_MATRIX, invariantForCheckId } from "./bindingMatrix.js";
 
@@ -142,6 +143,51 @@ export function checkPolicyBinding(sessionResults) {
     });
 }
 
+/**
+ * INV-FLT-01: numeric canonicalization fixture probe.
+ *
+ * Runtime, fixture-driven: canonicalizes every reference vector from
+ * canonicalNumber.js and asserts the exact expected string; then asserts
+ * that non-finite numbers are REJECTED. PASS iff both hold.
+ */
+export function checkNumericCanonicalization() {
+    for (const { input, expected } of CANONICAL_NUMBER_VECTORS) {
+        let actual;
+        try {
+            actual = canonicalNumberString(input);
+        } catch (e) {
+            return annotate("impl:numeric-canonicalization", {
+                label: "Numeric canonicalization",
+                status: STATUS.FAIL,
+                message: `INV-FLT-01: canonicalNumberString(${String(input)}) threw: ${e.message}`,
+            });
+        }
+        if (actual !== expected) {
+            return annotate("impl:numeric-canonicalization", {
+                label: "Numeric canonicalization",
+                status: STATUS.FAIL,
+                message: `INV-FLT-01 drift: canonicalNumberString(${String(input)}) → "${actual}", expected "${expected}".`,
+            });
+        }
+    }
+    for (const bad of [NaN, Infinity, -Infinity]) {
+        let threw = false;
+        try { canonicalNumberString(bad); } catch { threw = true; }
+        if (!threw) {
+            return annotate("impl:numeric-canonicalization", {
+                label: "Numeric canonicalization",
+                status: STATUS.FAIL,
+                message: `INV-FLT-01: canonicalizer accepted non-finite value ${String(bad)} instead of throwing.`,
+            });
+        }
+    }
+    return annotate("impl:numeric-canonicalization", {
+        label: "Numeric canonicalization",
+        status: STATUS.PASS,
+        message: `INV-FLT-01: ${CANONICAL_NUMBER_VECTORS.length} reference vectors canonicalize to the ES-NumberToString form; NaN/±Infinity are rejected.`,
+    });
+}
+
 /** INV-TMP-01: runtime deterministic tamper probe on an isolated clone. */
 export function checkTamperDetection(probe) {
     const pass = probe.ran && probe.detected;
@@ -225,6 +271,7 @@ export async function runConformanceSuite({ decisions, registeredPolicies }) {
         checkChainContinuity(v.results),
         checkPolicyBinding(v.results),
         checkTamperDetection(probe),
+        checkNumericCanonicalization(),
         checkEvidencePortability(),
         checkCrossImplementation(),
         checkAttestationSignature(),

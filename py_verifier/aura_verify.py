@@ -2,32 +2,93 @@
 """Aura-Guard Python reference verifier — independent implementation.
 
 Stdlib only. Reproduces the CURRENT IMPLEMENTATION semantics documented in
-/app/docs/BUNDLE_SCHEMA.md. NOT a normative Aura Protocol implementation.
-Does NOT invoke Node, does NOT import JS code.
+/app/docs/BUNDLE_SCHEMA.md and /app/docs/INV_FLT_01_NUMERIC_CANONICALIZATION.md.
+NOT a normative Aura Protocol implementation. Does NOT invoke Node, does NOT
+import JS code.
 """
 from __future__ import annotations
-import argparse, hashlib, json, sys
+import argparse, hashlib, json, math, sys
 from pathlib import Path
 
-PY_VERIFIER_VERSION = "aura-verify-py/0.1.0"
+PY_VERIFIER_VERSION = "aura-verify-py/0.2.0"
 PROTOCOL_VERSION = "unspecified"
 BUNDLE_VERSION = 1
+BINDING_MATRIX_VERSION = "1.0"
 GENESIS = "0" * 64
 PASS, FAIL, NI = "PASS", "FAIL", "NOT IMPLEMENTED"
 
 
+def _js_number_to_string(m: float) -> str:
+    """Port of ECMAScript §6.1.6.1.13 Number::toString for finite doubles.
+
+    Bit-exact with JS `String(n)` on every conforming ECMAScript engine.
+    See /app/docs/INV_FLT_01_NUMERIC_CANONICALIZATION.md.
+    """
+    if math.isnan(m) or math.isinf(m):
+        raise ValueError("INV-FLT-01: non-finite JSON numbers are forbidden")
+    if m == 0.0:
+        return "0"  # covers +0.0 and -0.0
+    if m < 0:
+        return "-" + _js_number_to_string(-m)
+    # Python's repr(float) is shortest round-trip since 3.1 — same digit set as
+    # ECMAScript's ToString. We reformat to ES layout rules (k, n).
+    r = repr(m)
+    if "e" in r:
+        mant, exp_str = r.split("e")
+        e = int(exp_str)
+    else:
+        mant, e = r, 0
+    if "." in mant:
+        i_part, f_part = mant.split(".")
+    else:
+        i_part, f_part = mant, ""
+    combined = i_part + f_part
+    # value == int(combined) * 10^(e - len(f_part))
+    all_digits = combined.lstrip("0") or "0"
+    trailing_zeros = 0
+    digits = all_digits
+    while len(digits) > 1 and digits.endswith("0"):
+        digits = digits[:-1]
+        trailing_zeros += 1
+    k = len(digits)
+    # value = int(digits) * 10^(trailing_zeros + e - len(f_part))
+    # value = int(digits) * 10^(n-k)  →  n = k + trailing_zeros + e - len(f_part)
+    n = k + trailing_zeros + e - len(f_part)
+    if k <= n <= 21:
+        return digits + ("0" * (n - k))
+    if 0 < n <= 21:
+        return digits[:n] + "." + digits[n:]
+    if -6 < n <= 0:
+        return "0." + ("0" * (-n)) + digits
+    exp_val = n - 1
+    exp_sign = "+" if exp_val >= 0 else "-"
+    exp_body = str(abs(exp_val))
+    if k == 1:
+        return digits + "e" + exp_sign + exp_body
+    return digits[0] + "." + digits[1:] + "e" + exp_sign + exp_body
+
+
 def canonicalize(v) -> str:
-    """Implementation-defined JCS-lite: sorted object keys, arrays in-order,
-    strings via json.dumps (ensure_ascii=False), no whitespace. Reproduces the
-    JS `canonicalize()` in /app/frontend/src/lib/verification.js for cross-
-    implementation testing only — NOT a claim of RFC 8785 conformance."""
-    if v is None or isinstance(v, bool) or isinstance(v, (int, float, str)):
-        return json.dumps(v, ensure_ascii=False, allow_nan=False)
+    """JCS-lite: sorted object keys, arrays in-order, no whitespace, strings
+    via json.dumps (ensure_ascii=False), numbers via ES-NumberToString
+    (INV-FLT-01). NOT a claim of RFC 8785 conformance."""
+    if v is None:
+        return "null"
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, int):
+        return str(v)
+    if isinstance(v, float):
+        return _js_number_to_string(v)
+    if isinstance(v, str):
+        return json.dumps(v, ensure_ascii=False)
     if isinstance(v, list):
         return "[" + ",".join(canonicalize(x) for x in v) + "]"
     if isinstance(v, dict):
         keys = sorted(v.keys())
-        return "{" + ",".join(json.dumps(k, ensure_ascii=False) + ":" + canonicalize(v[k]) for k in keys) + "}"
+        return "{" + ",".join(
+            json.dumps(k, ensure_ascii=False) + ":" + canonicalize(v[k]) for k in keys
+        ) + "}"
     raise TypeError(f"non-JSON value: {type(v).__name__}")
 
 
@@ -72,6 +133,42 @@ def tamper_probe(decisions, registered):
     return {"ran": True, "detected": detected}
 
 
+# INV-FLT-01 canonical numeric fixture — MUST be kept in lockstep with
+# /app/frontend/src/lib/canonicalNumber.js CANONICAL_NUMBER_VECTORS.
+CANONICAL_NUMBER_VECTORS = [
+    (0,                    "0"),
+    (-0.0,                 "0"),
+    (1,                    "1"),
+    (1.0,                  "1"),
+    (-1,                   "-1"),
+    (0.1,                  "0.1"),
+    (640.0,                "640"),
+    (128.4,                "128.4"),
+    (1e-6,                 "0.000001"),
+    (1e-7,                 "1e-7"),
+    (1e20,                 "100000000000000000000"),
+    (1e21,                 "1e+21"),
+    (9007199254740991,     "9007199254740991"),
+    (-9007199254740991,    "-9007199254740991"),
+]
+
+
+def numeric_canonicalization_probe():
+    """Fixture-driven probe for INV-FLT-01. Returns (ran, ok, first_failure)."""
+    for inp, expected in CANONICAL_NUMBER_VECTORS:
+        actual = canonicalize(inp)
+        if actual != expected:
+            return {"ran": True, "ok": False, "failure": {"input": inp, "expected": expected, "actual": actual}}
+    # Also assert non-finite rejection.
+    for bad in (float("nan"), float("inf"), float("-inf")):
+        try:
+            canonicalize(bad)
+        except (ValueError, TypeError):
+            continue
+        return {"ran": True, "ok": False, "failure": {"input": str(bad), "expected": "throw", "actual": "no-throw"}}
+    return {"ran": True, "ok": True}
+
+
 def run_suite(bundle: dict) -> dict:
     session = bundle["session"]
     decisions = session["decisions"]
@@ -85,22 +182,24 @@ def run_suite(bundle: dict) -> dict:
 
     def agg(k): return PASS if all(r["checks"][k] for r in results) else FAIL
     probe = tamper_probe(decisions, registered)
+    num_probe = numeric_canonicalization_probe()
 
     tests = [
-        {"id": "impl:evidence-structure", "status": PASS if structure_ok and decisions else FAIL},
+        {"id": "impl:evidence-structure",       "status": PASS if structure_ok and decisions else FAIL},
         {"id": "impl:canonical-representation", "status": agg("canonical_representation")},
-        {"id": "impl:hash-integrity", "status": agg("sha256_integrity")},
-        {"id": "impl:chain-continuity", "status": agg("hash_chain_continuity")},
-        {"id": "impl:policy-binding", "status": agg("policy_version")},
-        {"id": "impl:tamper-detection", "status": PASS if probe["ran"] and probe["detected"] else FAIL},
-        {"id": "impl:evidence-portability", "status": PASS},
-        {"id": "impl:cross-implementation", "status": NI},
-        {"id": "impl:attestation-signature", "status": NI},
+        {"id": "impl:hash-integrity",           "status": agg("sha256_integrity")},
+        {"id": "impl:chain-continuity",         "status": agg("hash_chain_continuity")},
+        {"id": "impl:policy-binding",           "status": agg("policy_version")},
+        {"id": "impl:tamper-detection",         "status": PASS if probe["ran"] and probe["detected"] else FAIL},
+        {"id": "impl:numeric-canonicalization", "status": PASS if num_probe["ok"] else FAIL},
+        {"id": "impl:evidence-portability",     "status": PASS},
+        {"id": "impl:cross-implementation",     "status": NI},
+        {"id": "impl:attestation-signature",    "status": NI},
     ]
     overall = FAIL if any(t["status"] == FAIL for t in tests) else PASS
     return {"protocol_version": PROTOCOL_VERSION, "verifier_version": PY_VERIFIER_VERSION,
-            "bundle_version": BUNDLE_VERSION, "record_count": len(decisions),
-            "overall": overall, "tests": tests}
+            "bundle_version": BUNDLE_VERSION, "binding_matrix_version": BINDING_MATRIX_VERSION,
+            "record_count": len(decisions), "overall": overall, "tests": tests}
 
 
 def main(argv=None):
