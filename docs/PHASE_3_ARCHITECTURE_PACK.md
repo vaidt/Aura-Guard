@@ -1,14 +1,15 @@
 # PHASE 3 — ARCHITECTURE PACK (Final Combined Report)
 
-**Status:** ANALYSIS ARTIFACT · NON-NORMATIVE · READ-ONLY
+**Status:** ANALYSIS ARTIFACT · NON-NORMATIVE · READ-ONLY · P-ID TAXONOMY CORRECTED
 **protocol_version:** `unspecified`
 **Owner:** Aura Protocol Owner (recipient of this pack).
 **Producer:** Phase-3 architecture analysis pass — no production code
 was written, modified, refactored, or deleted.
 
-This document is the **final consolidated deliverable** of the Phase-3
-Architecture Pack directive. It composes and cross-references the five
-companion analysis artifacts:
+This document is the final consolidated deliverable of the Phase-3
+Architecture Pack directive, as revised by the Governance Correction
+pass. It composes and cross-references the five companion analysis
+artifacts:
 
 1. [`PHASE_3_SEMANTIC_INVENTORY.md`](./PHASE_3_SEMANTIC_INVENTORY.md)
 2. [`PHASE_3_PROTOCOL_DECISION_MATRIX.md`](./PHASE_3_PROTOCOL_DECISION_MATRIX.md)
@@ -16,172 +17,167 @@ companion analysis artifacts:
 4. [`PHASE_3_GOLDEN_VECTOR_PLAN.md`](./PHASE_3_GOLDEN_VECTOR_PLAN.md)
 5. [`PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md`](./PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md)
 
-**Execution constraints honored** — as re-stated by the Owner at
-kickoff:
-
-- No production code was touched.
-- Canonical P-001 … P-012 decision catalogue is preserved.
-- Newly discovered domains are recorded as `DISCOVERED / P-013+` in the
-  Ambiguity Register only; they have **not** been promoted into the
-  canonical catalogue.
-- Every finding is strictly labeled: FACT / TESTED / ASSUMPTION /
-  AMBIGUITY / INV-CANDIDATE / OPTION / RECOMMENDATION / OWNER-DECISION.
-- No ambiguity has been resolved. Any recommendation is
-  **RECOMMENDATION ONLY**.
-- No golden-vector expected values were fabricated for
-  unresolved semantics — those rows are marked **BLOCKED BY DECISION
-  P-XXX**.
-- Attestation / signing semantics remain **DEFERRED / NON-NORMATIVE**.
-
 ---
 
-## 1. Executive summary
+## PHASE 3 GOVERNANCE CORRECTION — P-ID TAXONOMY RESTORED
 
-Aura-Guard is presently a **highly-tested, dual-implementation
-demonstrator** whose invariants are declared **implementation-scoped**
+- The initial Phase 3 analysis produced valuable findings on
+  canonicalization, numeric serialization, hashing, chain semantics,
+  policy binding, attestation, cross-implementation parity, evidence
+  storage, and CLI contract behavior. **All of those findings are
+  preserved.**
+- During documentation generation, several **P-IDs were temporarily
+  assigned meanings inconsistent with the canonical Phase 3 taxonomy**
+  (in particular P-005 had been misused for "genesis anchor", P-006 for
+  "timestamps", P-007 for "string encoding", P-008 for "failure codes",
+  P-010 for "CLI contract", and P-012 for "envelope/version compat").
+- **This has been corrected.** The canonical P-001 … P-012 mapping is
+  now restored across every Phase 3 document, and every previously
+  misclassified finding has been re-referenced to its correct canonical
+  domain (see the reclassification audit trail in
+  [`PHASE_3_AMBIGUITY_REGISTER.md`](./PHASE_3_AMBIGUITY_REGISTER.md#reclassification-audit-trail-old--canonical)).
+- **No protocol decision was made by this correction.**
+- **No production code was changed.**
+- **`protocol_version` remains `"unspecified"`.**
+- Candidate IDs previously introduced during the initial pass — P-015,
+  P-016, P-017 — have been **retired** because their content is now
+  fully covered by canonical P-007, P-004+P-010, and P-005+P-006
+  respectively. CANDIDATE P-013 (attestation governance) and CANDIDATE
+  P-014 (verifier replay/idempotency) remain **DISCOVERED / DEFERRED**
+  and are NOT promoted into the canonical catalogue.
+- Timestamp semantics are recorded as
+  **DISCOVERED / CROSS-CUTTING SEMANTIC DOMAIN** with dependencies on
+  P-001, P-010, and CANDIDATE P-013. **The Owner may later decide
+  whether timestamp semantics deserve a dedicated protocol decision.
+  That decision is not made here.**
+
+## 1. Canonical decision surface (authoritative)
+
+| ID | Canonical domain |
+|---|---|
+| **P-001** | Canonicalization |
+| **P-002** | Numeric serialization |
+| **P-003** | Hash domain |
+| **P-004** | Chain semantics |
+| **P-005** | Bundle envelope |
+| **P-006** | Optional / unknown fields |
+| **P-007** | Policy binding |
+| **P-008** | Verification result semantics |
+| **P-009** | Versioning |
+| **P-010** | Evidence boundary |
+| **P-011** | Cross-implementation semantics |
+| **P-012** | Error / malformed-input semantics |
+
+Full text, enumerated options, and non-binding recommendations for each
+decision are in the Decision Matrix.
+
+## 2. Executive summary
+
+Aura-Guard is a **highly-tested, dual-implementation demonstrator**
+whose invariants remain explicitly **implementation-scoped**
 (`REQ-*` / `INV-*` / `protocol_version = "unspecified"`). Two verifiers
 (Node ESM + pure-Python stdlib) agree at runtime on 10 semantic checks
 spanning canonicalization, integrity, chain linkage, policy binding,
 tamper detection, portability, cross-implementation parity, and Ed25519
 attestation.
 
-The Phase-3 analysis identifies **23 explicit ambiguities** — 16 tied to
-the canonical decision catalogue (P-001 … P-012) and 7 tied to
-newly-discovered candidate domains (`P-013+`). It also identifies **30
-candidate architectural invariants** across 15 categories. **12 of these
-candidates are already "ready to normalize"** given only editorial spec
-language; **18 depend on Owner decisions** listed in the Decision Matrix.
+After the governance-correction pass, Phase 3 records **24 ambiguities**
+distributed under the canonical catalogue as follows:
+
+| Domain | Ambiguity rows |
+|---|---|
+| P-001 Canonicalization | 5 (A-001, A-002, A-009, A-010, plus the empty-structure fixture gap) |
+| P-002 Numeric serialization | 2 (A-003, A-004) |
+| P-003 Hash domain | 1 (A-005) |
+| P-004 Chain semantics | 2 (A-006, A-007) + partial share of A-021 |
+| P-005 Bundle envelope | 1 (A-024) |
+| P-006 Optional / unknown fields | 1 (A-015) |
+| P-007 Policy binding | 1 (A-025) |
+| P-008 Verification result semantics | 2 (A-016, A-026) |
+| P-009 Versioning | 1 (A-012) |
+| P-010 Evidence boundary | 2 (A-020, A-021) |
+| P-011 Cross-implementation semantics | 1 (A-014) + shared A-026 |
+| P-012 Error / malformed-input semantics | 3 (A-011, A-022, A-023) |
+| DISCOVERED / CROSS-CUTTING | 2 (A-030 timestamps, A-031 CLI JSON) |
+| CANDIDATE P-013+ (DEFERRED) | 2 (A-032 attestation, A-033 replay) |
+
+**43 candidate architectural invariants** across the canonical catalogue
+are enumerated in the Invariant Candidates document, all marked
+**CANDIDATE — OWNER REVIEW REQUIRED**.
 
 **No decision has been made in this pack.** The Aura Protocol cannot
 transition out of `"unspecified"` until the Owner rules on at least
 P-001 … P-012.
 
-## 2. Contents summary
+## 3. Cross-cutting risk map
 
-| Document | Purpose | Size |
-|---|---|---|
-| Semantic Inventory | Enumerates every semantic surface the two verifiers currently depend on, with FACT / TESTED / ASSUMPTION / AMBIGUITY tags per row. | ~ 3 pages of tables. |
-| Decision Matrix | The 12 canonical Owner decisions (P-001 … P-012): question → facts → enumerated options → recommendation → **OWNER DECISION REQUIRED**. | 12 sections. |
-| Ambiguity Register | 23 specific ambiguity rows (A-001 … A-016 canonical + A-101 … A-107 discovered) linked to the decisions that unblock each. | 2 sections. |
-| Golden Vector Plan | Categories & shapes of golden vectors needed for a normative freeze, with **BLOCKED BY DECISION P-XXX** markers for values that cannot yet be fabricated. | 10 categories. |
-| Invariant Candidates | 30 proposed `AURA-INV-*-<n>` architectural invariants with binding-decision references. | 15 categories. |
-
-## 3. Canonical decision surface (P-001 … P-012)
-
-The 12 canonical Owner decisions inferred from the current codebase and
-enumerated in the Decision Matrix:
-
-| ID | Domain | Owner question |
-|---|---|---|
-| **P-001** | Canonicalization algorithm identity | Which spec? JCS-lite (current), RFC 8785, or a stricter subset? |
-| **P-002** | Numeric serialization | Retain ES-NumberToString? Integer domain? Bignum? Subnormals? |
-| **P-003** | Hash function | Pin SHA-256 forever, or carry a `hash_algorithm` field? |
-| **P-004** | Hash-chain linkage formula | Textual hex concatenation (current) vs raw-byte vs domain-separated? |
-| **P-005** | Genesis anchor | 64×`0x30` (current) vs SHA-256("") vs session-derived? |
-| **P-006** | Timestamp grammar & zone | RFC 3339 UTC strict? RFC 3339 any offset? Unix ms? |
-| **P-007** | String / character encoding & escape rules | Pin RFC 8785 §3.2.2, JS `JSON.stringify`, or Python `json.dumps(ensure_ascii=False)`? |
-| **P-008** | Verifier error / failure codes | Codes advisory, normative, or two-tier? |
-| **P-009** | Binding-matrix governance | Matrix normative or implementation-scoped? Version drift rule? |
-| **P-010** | Verifier CLI contract & JSON schema | Publish a JSON Schema for `--json` output? |
-| **P-011** | Cross-implementation parity protocol | Symmetric spawn vs reference-implementation vs golden-corpus? |
-| **P-012** | Envelope & version compatibility | SemVer or integer? Unknown-key policy? Attestation required? |
-
-Full text, enumerated options, and recommendations are in the Decision
-Matrix.
-
-## 4. Discovered additional domains (candidate P-013+)
-
-These were surfaced during code inspection. They are **not** part of
-P-001 … P-012 and MUST NOT be silently promoted. The Owner may elect to
-promote them in a subsequent phase.
-
-| Candidate ID | Domain | Blocking question |
-|---|---|---|
-| **P-013** | Attestation governance | Is Ed25519 attestation part of Aura Protocol at all? What is the multi-signer / counter-signature model? Is `retired` a live status? |
-| **P-014** | Verifier replay / idempotency | Must verify be a pure function? |
-| **P-015** | Policy-version semantics | Comparator: identity, semver, content-hash? |
-| **P-016** | Cascade / prev-hash source | Re-derived (current) vs stored? |
-| **P-017** | Envelope openness | Extra keys: tolerate / forbid / `x-`-prefixed? |
-
-## 5. Cross-cutting risk map
-
-Each risk lists the decision(s) that would remove it.
+Each risk lists the decision(s) that would remove it (all canonical).
 
 | Risk | Failure mode | Removes with |
 |---|---|---|
-| Unicode-key canonicalization drift between JS and Python. | Silent hash divergence on non-ASCII payloads. | P-001, P-007. |
+| Unicode-key canonicalization drift between JS and Python. | Silent hash divergence on non-ASCII payloads. | P-001. |
 | Numeric drift on subnormals / integer edge / bignum. | Silent evidence corruption. | P-002. |
-| Textual-vs-binary hash-chain concatenation misread by a 3rd-party impl. | Total chain-hash divergence. | P-004. |
-| Attestation timestamp form drift. | Attestation verified by one impl rejected by another. | P-006. |
-| Free-form failure codes. | Automated remediation impossible across impls. | P-008. |
-| Binding-matrix version drift (already present: `1.3` vs `1.2`). | Silent capability skew. | P-009. |
-| CLI JSON schema drift. | Downstream tooling breakage. | P-010. |
-| Cross-impl parity is one-way (Node → Python). | Python-side regressions invisible to CI. | P-011. |
-| Envelope tolerates unknown keys silently. | Extension semantics undefined; forward compatibility fragile. | P-012. |
-| `retired` attestation status is dead code path. | Spec/code drift on the attestation lifecycle. | P-013 (candidate). |
+| Textual-vs-binary hash-chain concatenation misread. | Total chain-hash divergence. | P-004. |
+| Genesis anchor byte definition ambiguity. | Chain-hash divergence on record 0. | P-004. |
+| Storage of `canonical_representation` inside evidence unresolved. | Different producers/verifiers expect different shapes. | P-010. |
+| Free-form failure codes on non-attestation tests. | Automated remediation across impls impossible. | P-012. |
+| `binding_matrix_version` drift (`1.3` JS vs `1.2` Python). | Silent capability skew. | P-009 (only if promoted to normative). |
+| CLI JSON schema drift. | Downstream tooling breakage. | P-011 (parity minimum payload). |
+| Cross-impl parity is one-way (Node → Python). | Python-side regressions invisible in this axis. | P-011. |
+| Envelope tolerates unknown keys silently. | Extension semantics undefined. | P-006. |
+| `NOT IMPLEMENTED` counts as PASS in overall verdict. | Silent capability regression. | P-008. |
+| `retired` attestation status is dead code path. | Doc / code drift. | CANDIDATE P-013 (DEFERRED). |
+| Timestamp grammar drift. | Attestation verified by one impl rejected by another. | Cross-cutting; depends on P-001 / P-010 / P-013. |
 
-## 6. Ready-to-normalize invariants (no further decision needed except editorial)
-
-From the Invariant Candidates document, these are the rows marked
-"Yes / ready to normalize":
-
-- **AURA-INV-CAN-2** — Insignificant whitespace forbidden in canonical form.
-- **AURA-INV-CAN-4** — Arrays preserve input order.
-- **AURA-INV-NUM-1** — ES-NumberToString for finite doubles.
-- **AURA-INV-NUM-2** — Reject NaN / ±Infinity in canonicalizer.
-- **AURA-INV-HASH-1** — SHA-256 → lowercase hex, no separator.
-- **AURA-INV-CHN-2** — Genesis = 64×`0x30`.
-- **AURA-INV-TMP-1** — Runtime tamper probe requirement.
-- **AURA-INV-POR-1** — Independent-verifier portability.
-- **AURA-INV-XIM-1** — Per-test-status agreement across impls.
-- **AURA-INV-ATT-2** — Trusted registry out-of-band only.
-- **AURA-INV-VER-2** — `protocol_version` present; `"unspecified"` meaning.
-- **AURA-INV-CLI-1** — Exit codes 0/1/2.
-
-Adopting these does not require any code change and does not commit the
-Owner on any of the P-001…P-012 questions. They are the low-risk
-scaffolding for the eventual normative spec.
-
-## 7. Blocking-decision dependency graph
+## 4. Blocking-decision dependency graph
 
 ```
-P-001 ─┬─▶ AURA-INV-CAN-1/3/5, GV-C-001, GV-C-004
-       └─▶ (Unicode-key rule) ▶ A-001, A-002, A-010
-P-002 ─┬─▶ AURA-INV-NUM-1/2/3, GV-N-001/002/005
-       └─▶ A-003, A-004
-P-003 ─▶ AURA-INV-HASH-1/2
-P-004 ─▶ AURA-INV-CHN-1/4, GV-H-003, A-006
-P-005 ─▶ AURA-INV-CHN-2, GV-H-002, A-007
-P-006 ─▶ AURA-INV-TIME-1, GV-T-001, GV-A-001, A-008
-P-007 ─▶ AURA-INV-CAN-1 (escapes), GV-S-001/002/003, A-009
-P-008 ─▶ GV-N-004, A-011
-P-009 ─▶ AURA-INV-XIM-2, GV-X-002, A-012
-P-010 ─▶ AURA-INV-CLI-1/2, AURA-INV-REP-1, GV-X-001, GV-R-001, A-013
-P-011 ─▶ AURA-INV-XIM-1, GV-X-001, A-014
-P-012 ─▶ AURA-INV-STR-1, AURA-INV-VER-1/2, AURA-INV-EXT-1, GV-E-001/002, A-015, A-016
+P-001 Canonicalization ─┬─▶ AURA-INV-CAN-1..7, GV-C-*, GV-CH-* (via cascade), GV-D-001 (partial)
+                        └─▶ Depends on Unicode key ordering + escape table + duplicate-key policy
+P-002 Numeric        ─▶ AURA-INV-NUM-1..4, GV-N-001..005, GV-M-003 (with P-012)
+P-003 Hash domain    ─▶ AURA-INV-HASH-1..2, GV-H-001
+P-004 Chain          ─┬─▶ AURA-INV-CHN-1..4 (includes genesis + cascade)
+                      └─▶ GV-CH-001..003
+P-005 Envelope       ─▶ AURA-INV-ENV-1..3, GV-E-001..002
+P-006 Unknown fields ─▶ AURA-INV-EXT-1..2, GV-O-001..003
+P-007 Policy         ─▶ AURA-INV-POL-1..3, GV-P-001..003
+P-008 Result sem.    ─▶ AURA-INV-REP-1..4, GV-V-001..002
+P-009 Versioning     ─▶ AURA-INV-VER-1..3, GV-VER-001..002, GV-E-001
+P-010 Evidence bound ─┬─▶ AURA-INV-EB-1..4, GV-EB-001..002, GV-CH-003
+                      └─▶ Depends jointly with P-004 on cascade authority
+P-011 Cross-impl     ─▶ AURA-INV-XIM-1..3, GV-X-001..002, GV-D-002
+P-012 Error / bad    ─▶ AURA-INV-ERR-1..4, GV-M-001..003, GV-N-004
 
-P-013 (candidate) ─▶ AURA-INV-ATT-1/2/3, GV-A-001/002/003, A-101/106/107
-P-014 (candidate) ─▶ A-102
-P-015 (candidate) ─▶ AURA-INV-POL-1, GV-P-001, A-103
-P-016 (candidate) ─▶ AURA-INV-CHN-3/4, GV-H-004, A-104
-P-017 (candidate) ─▶ AURA-INV-EXT-1, A-105
+DISCOVERED / CROSS-CUTTING (no canonical P-ID)
+  Timestamps (A-030)   ▶ depends on P-001, P-010, CANDIDATE P-013
+  CLI JSON (A-031)     ▶ depends on P-011
+
+CANDIDATE / DEFERRED (NOT promoted)
+  P-013 Attestation    ▶ deferred; NOT part of the canonical catalogue in this pack
+  P-014 Replay         ▶ deferred
 ```
 
-## 8. Recommended sequencing (RECOMMENDATION ONLY)
+## 5. Recommended sequencing — **RECOMMENDATION ONLY — NON-BINDING**
 
-**Non-binding.** Left to the Owner.
+Non-binding order-of-operations offered to help the Owner triage. The
+Owner may choose any sequence:
 
-1. Resolve P-001, P-002, P-003, P-004, P-005 first — they are the
-   cryptographic core. Every downstream artifact depends on them.
-2. Then P-006, P-007 — they finish the canonical byte definition.
-3. Then P-012 — envelope + versioning, unblocks the schema freeze.
-4. Then P-010, P-011 — unblocks the verifier contract.
-5. Then P-008 — failure taxonomy (independent, can slip late).
-6. Then P-009 — matrix governance.
-7. Finally, decide whether P-013 (attestation) enters the normative spec
-   in v1 or as a v1.1 extension.
+1. **P-001, P-002, P-003, P-004** — the cryptographic and canonical
+   byte core; every downstream artifact depends on them.
+2. **P-005, P-006** — envelope and extensibility model.
+3. **P-010** — pins the evidence boundary rules that P-004 partially
+   depends on.
+4. **P-007** — policy binding.
+5. **P-008, P-011** — reporting semantics and cross-impl parity.
+6. **P-009** — versioning (including the sub-question of whether
+   `binding_matrix_version` is normative).
+7. **P-012** — error / malformed-input taxonomy.
+8. **CANDIDATE P-013** — decide whether attestation joins the normative
+   spec in v1 or as a v1.1 extension.
+9. **Cross-cutting** — decide whether timestamps deserve a dedicated
+   protocol decision.
 
-## 9. Cross-file consistency checks performed
+## 6. Cross-file consistency checks performed
 
 | Check | Result |
 |---|---|
@@ -191,51 +187,91 @@ P-017 (candidate) ─▶ AURA-INV-EXT-1, A-105
 | `PROTOCOL_VERSION` across JS + Python | Consistent (`"unspecified"`). |
 | `BUNDLE_VERSION` across JS + Python | Consistent (`1`). |
 | INV-FLT-01 vectors: JS list vs Python list | Consistent (same 14 vectors). |
-| Demo signing-key public hex: `demo-keys.mjs` vs `signingKeys.js` vs (assumed) `/app/config/signing_keys.json` | JS mirror consistent; on-disk JSON file was not opened in this pass (would require re-inspection). |
+| Phase 3 document P-ID references (post-correction) | Consistent with canonical P-001…P-012 catalogue (see §14 audit below). |
 
-## 10. Formal completion report
-
-Per Owner directive, this pack explicitly reports:
-
-1. **Files inspected** — see §1 of the Semantic Inventory (16 files).
-2. **Code paths traced** — see §2 of the Semantic Inventory.
-3. **Documents generated** — six files under `/app/docs/`:
-   - `PHASE_3_SEMANTIC_INVENTORY.md`
-   - `PHASE_3_PROTOCOL_DECISION_MATRIX.md`
-   - `PHASE_3_AMBIGUITY_REGISTER.md`
-   - `PHASE_3_GOLDEN_VECTOR_PLAN.md`
-   - `PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md`
-   - `PHASE_3_ARCHITECTURE_PACK.md` (this document)
-4. **Ambiguities discovered** — 23 total (16 tied to P-001…P-012;
-   7 tied to candidate P-013+).
-5. **Blocking protocol decisions** — 12 canonical (P-001…P-012) + 5
-   discovered (P-013…P-017). All remain **OWNER DECISION REQUIRED**.
-6. **Additional discovered domains** — P-013 (attestation), P-014
-   (replay), P-015 (policy comparator), P-016 (cascade source), P-017
-   (envelope openness). Recorded as candidates only; **not promoted**
-   into P-001…P-012.
-7. **Confirmation** — **NO production code was changed.** No file under
-   `/app/frontend/src/`, `/app/cli/`, `/app/py_verifier/`,
-   `/app/frontend/tests/`, `/app/py_verifier/tests/`, or `/app/config/`
-   was created, modified, or deleted in the course of producing this
-   pack. The only writes made were the six documentation files listed
-   above under `/app/docs/`.
-
-## 11. What the Owner MUST do next
+## 7. What the Owner MUST do next
 
 1. Read the Decision Matrix and rule on P-001 … P-012.
-2. Elect whether to promote any of P-013 … P-017 into the normative
-   catalogue.
-3. Approve the "ready-to-normalize" invariants of §6 (or revise them).
+2. Elect whether to promote CANDIDATE P-013 (attestation) and/or
+   CANDIDATE P-014 (replay) into the normative catalogue.
+3. Elect whether timestamp semantics receive a dedicated protocol
+   decision.
 4. Authorize a Phase-4 code change to align implementation to the ruled
    decisions AND to backfill the golden vectors unblocked by those
    decisions.
 
-Until step 1 is complete, `protocol_version` MUST remain `"unspecified"`
-and no evidence bundle produced by this implementation is a "conforming
-Aura Protocol bundle" — only a "conforming Aura-Guard implementation
-bundle".
+Until step 1 is complete, `protocol_version` MUST remain
+`"unspecified"` and no evidence bundle produced by this implementation
+is a "conforming Aura Protocol bundle" — only a "conforming Aura-Guard
+implementation bundle".
+
+## 8. Final canonical table (for reference)
+
+| ID | Canonical domain |
+|---|---|
+| P-001 | Canonicalization |
+| P-002 | Numeric serialization |
+| P-003 | Hash domain |
+| P-004 | Chain semantics |
+| P-005 | Bundle envelope |
+| P-006 | Optional / unknown fields |
+| P-007 | Policy binding |
+| P-008 | Verification result semantics |
+| P-009 | Versioning |
+| P-010 | Evidence boundary |
+| P-011 | Cross-implementation semantics |
+| P-012 | Error / malformed-input semantics |
+
+## 9. Formal completion report
+
+Per Owner directive:
+
+- **A. Documents changed.** All six Phase 3 artifacts:
+  `PHASE_3_SEMANTIC_INVENTORY.md`,
+  `PHASE_3_PROTOCOL_DECISION_MATRIX.md`,
+  `PHASE_3_AMBIGUITY_REGISTER.md`,
+  `PHASE_3_GOLDEN_VECTOR_PLAN.md`,
+  `PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md`,
+  `PHASE_3_ARCHITECTURE_PACK.md` (this document).
+- **B. Findings preserved.** All findings from the initial Phase 3 pass
+  (16 canonical A-IDs + 7 candidate discovered-domain rows = 23
+  original rows) are preserved. Seven additional rows were added
+  during the correction to complete the canonical mapping
+  (A-020, A-021, A-022, A-023, A-024, A-025, A-026), yielding a new
+  total of **24 rows** after retiring the redundant candidate IDs
+  P-015/P-016/P-017 whose content is now fully covered by canonical
+  domains.
+- **C. Findings reclassified.** The Ambiguity Register contains a full
+  reclassification audit trail listing every row whose P-ID mapping was
+  corrected (approximately 12 rows moved to a different canonical
+  domain; the remaining rows kept their P-ID under the corrected
+  meaning).
+- **D. Discovered/candidate domains retained separately.**
+  - Cross-cutting: A-030 (timestamps), A-031 (CLI JSON).
+  - CANDIDATE / DEFERRED: A-032 (P-013 attestation),
+    A-033 (P-014 replay).
+- **E. Owner decisions still open.** 12 canonical (P-001 … P-012). All
+  remain **OWNER DECISION REQUIRED**. Two candidate domains (P-013,
+  P-014) are DEFERRED and not part of the canonical catalogue in this
+  pack.
+- **F. Confirmations.**
+  - **NO** production code changed.
+  - **NO** tests changed.
+  - **NO** protocol semantics were frozen.
+  - **NO** normative decision was made.
+  - **`protocol_version` remains `"unspecified"`.**
+- **G. Final canonical table** — see §8 above and identical mapping at
+  the head of every Phase 3 document.
+
+## 10. Governance rule recap
+
+The purpose of this pack is NOT to make Aura Protocol decisions. The
+purpose is to make the Phase 3 analysis structurally trustworthy so the
+Aura Protocol Owner can make those decisions later.
+
+**Analyze. Reclassify. Document. Do not decide. Do not implement.**
 
 ---
 
-**End of Phase-3 Architecture Pack.**
+**End of Phase-3 Architecture Pack (revised under Governance
+Correction).**

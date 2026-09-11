@@ -1,302 +1,372 @@
 # PHASE 3 — PROTOCOL INVARIANT CANDIDATES
 
-**Status:** ANALYSIS ARTIFACT · NON-NORMATIVE · READ-ONLY
+**Status:** ANALYSIS ARTIFACT · NON-NORMATIVE · READ-ONLY · P-ID TAXONOMY CORRECTED
 **protocol_version:** `unspecified`
 
 Purpose: enumerate the architectural invariants that a future normative
 Aura Protocol specification will need to state, drawing on the current
-implementation as *evidence* only. Every candidate below is **CANDIDATE
-INVARIANT — OWNER DECISION REQUIRED** and MUST NOT be treated as
-normative.
+implementation as **evidence only**. Every candidate below is
+**CANDIDATE — OWNER REVIEW REQUIRED** and MUST NOT be treated as
+normative. All P-ID references have been aligned to the canonical
+Phase 3 catalogue.
 
-Naming convention (proposal, not normative): `AURA-INV-<CATEGORY>-<n>`
-where `<CATEGORY>` is one of `STR`, `CAN`, `NUM`, `HASH`, `CHN`, `POL`,
-`TMP`, `POR`, `XIM`, `ATT`, `TIME`, `VER`, `CLI`, `REP`, `EXT`.
+## Canonical mapping (authoritative)
 
-Each row: candidate → binding decision → current implementation evidence
-→ blocking gaps.
+| ID | Domain |
+|---|---|
+| P-001 | Canonicalization |
+| P-002 | Numeric serialization |
+| P-003 | Hash domain |
+| P-004 | Chain semantics |
+| P-005 | Bundle envelope |
+| P-006 | Optional / unknown fields |
+| P-007 | Policy binding |
+| P-008 | Verification result semantics |
+| P-009 | Versioning |
+| P-010 | Evidence boundary |
+| P-011 | Cross-implementation semantics |
+| P-012 | Error / malformed-input semantics |
+
+Naming convention (proposal, not normative):
+`AURA-INV-<CATEGORY>-<n>` where `<CATEGORY>` is one of `CAN`, `NUM`,
+`HASH`, `CHN`, `ENV`, `EXT`, `POL`, `REP`, `VER`, `EB`, `XIM`, `ERR`,
+plus `TMP` for the runtime probe requirement.
 
 ---
 
-## Category STR — Structural
+## P-001 · Canonicalization
 
-### AURA-INV-STR-1 (candidate)
-- **Statement:** Every decision record MUST have a non-empty stable `id`
-  and a fully-populated `evidence` object with exactly `{canonical_representation, canonical_hash, prev_hash, chain_hash}`.
-- **Bound to decision:** P-012 (envelope openness).
-- **Evidence:** INV-STR-01 in `binding_matrix.json`; enforced by
-  `checkEvidenceStructure`.
-- **Blocking gap:** Whether `evidence.policy_version` echo is required or
-  forbidden (currently optional).
+### AURA-INV-CAN-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Canonicalization is a total, deterministic function
+  from JSON DAG to byte string.
+- **Evidence:** INV-CAN-01 in `binding_matrix.json`.
+- **Blocking:** P-001 (Unicode ordering, escape table).
 
-### AURA-INV-STR-2 (candidate)
-- **Statement:** `session.registered_policy_versions` MUST be a non-empty
-  array of non-empty strings.
-- **Bound to decision:** P-015 (discovered).
-- **Evidence:** Assumed by `verifyDecision`; no explicit non-empty check
-  today.
-
-## Category CAN — Canonicalization
-
-### AURA-INV-CAN-1 (candidate)
-- **Statement:** Canonicalization is a **total, deterministic function**
-  from JSON DAG to byte string; same input MUST produce the same bytes
-  in every conforming implementation.
-- **Bound to decision:** P-001.
-- **Evidence:** INV-CAN-01. Determinism relies on JS `Object.keys().sort()`
-  and Python `sorted(keys)` agreeing on ordering.
-- **Blocking gap:** Unicode key-ordering rule (see A-001, A-009).
-
-### AURA-INV-CAN-2 (candidate)
-- **Statement:** Insignificant whitespace MUST NOT appear in the canonical
+### AURA-INV-CAN-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** No insignificant whitespace may appear in the canonical
   form.
-- **Bound to decision:** P-001.
 - **Evidence:** Both canonicalizers concatenate directly.
+- **Blocking:** P-001.
 
-### AURA-INV-CAN-3 (candidate)
-- **Statement:** Object keys MUST be sorted by a normatively-defined
-  string comparator; a conforming implementation MUST document which
-  comparator it uses (choice pending P-001).
-- **Bound to decision:** P-001.
+### AURA-INV-CAN-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Object keys are sorted by a normatively-defined
+  comparator; conforming implementations MUST document which comparator
+  they use.
+- **Blocking:** P-001.
 
-### AURA-INV-CAN-4 (candidate)
-- **Statement:** Arrays MUST preserve their input order (order is
-  semantic).
-- **Bound to decision:** P-001.
+### AURA-INV-CAN-4 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Arrays preserve their input order (order is semantic).
 - **Evidence:** Both impls.
+- **Blocking:** P-001.
 
-### AURA-INV-CAN-5 (candidate)
-- **Statement:** Payload for canonicalization MUST be the decision object
-  with the `evidence` key removed (recursively iff future spec extends
-  evidence blocks nested elsewhere).
-- **Bound to decision:** P-001, P-012.
-- **Evidence:** `decisionPayload` in JS, `_payload` in Python.
+### AURA-INV-CAN-5 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Payload for canonicalization = decision object minus
+  the `evidence` key.
+- **Blocking:** P-001 + P-010 (evidence boundary informs the "minus
+  evidence" rule).
 
-## Category NUM — Numbers
+### AURA-INV-CAN-6 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** String escape rules for controls (U+0000–U+001F),
+  U+2028/2029, and unpaired surrogates MUST be normatively fixed.
+- **Blocking:** P-001.
 
-### AURA-INV-NUM-1 (candidate)
-- **Statement:** Every finite IEEE-754 double MUST be serialized by
-  ECMAScript §6.1.6.1.13 `Number::toString` (bit-exact).
-- **Bound to decision:** P-002.
+### AURA-INV-CAN-7 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Duplicate-key policy at canonicalization boundary
+  MUST be fixed (reject before parse / last-wins / first-wins).
+- **Blocking:** P-001.
+
+## P-002 · Numeric serialization
+
+### AURA-INV-NUM-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Every finite IEEE-754 double is serialized by
+  ECMAScript §6.1.6.1.13 `Number::toString`.
 - **Evidence:** INV-FLT-01.
+- **Blocking:** P-002 (adoption is Owner call).
 
-### AURA-INV-NUM-2 (candidate)
-- **Statement:** `NaN`, `+Infinity`, `-Infinity` MUST be rejected by the
+### AURA-INV-NUM-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** `NaN`, `+Infinity`, `-Infinity` are rejected by the
   canonicalizer.
-- **Bound to decision:** P-002.
-- **Evidence:** `canonicalNumberString` throws; Python `_js_number_to_string`
-  raises `ValueError`.
+- **Evidence:** Both impls throw.
+- **Blocking:** P-002.
 
-### AURA-INV-NUM-3 (candidate — CONDITIONAL on P-002)
-- **Statement:** Integer literals MUST lie within `[-2^53+1, 2^53-1]` OR
-  the specification MUST define a normative representation for larger
-  integers (e.g. explicit `bigint` type marker).
-- **Bound to decision:** P-002.
-- **Evidence:** Python allows arbitrary ints via `str(n)`; JS cannot round-
-  trip past `Number.MAX_SAFE_INTEGER`.
+### AURA-INV-NUM-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Integer domain is normatively fixed
+  (default proposal: `[-2^53+1, 2^53-1]`).
+- **Blocking:** P-002.
 
-## Category HASH — Hashing
+### AURA-INV-NUM-4 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Subnormal handling is normatively fixed (accept /
+  reject / round-to-zero).
+- **Blocking:** P-002.
 
-### AURA-INV-HASH-1 (candidate)
-- **Statement:** Evidence-content integrity MUST be established by SHA-256
+## P-003 · Hash domain
+
+### AURA-INV-HASH-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Evidence content integrity is established by SHA-256
   over UTF-8(canonical_representation), encoded as lowercase hex without
   separators.
-- **Bound to decision:** P-003.
-- **Evidence:** `sha256Hex` / `sha256_hex`.
+- **Blocking:** P-003.
 
-### AURA-INV-HASH-2 (candidate)
-- **Statement:** The wire format MAY carry a `hash_algorithm` identifier
-  to permit future migration (Option B of P-003).
-- **Bound to decision:** P-003.
+### AURA-INV-HASH-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Wire MAY carry a `hash_algorithm` identifier for future
+  migration.
+- **Blocking:** P-003.
 
-## Category CHN — Chain
+## P-004 · Chain semantics
 
-### AURA-INV-CHN-1 (candidate)
-- **Statement:** `chain_hash[i] = SHA-256( ascii(prev_hex[i]) ‖ ascii(canonical_hash_hex[i]) )`
+### AURA-INV-CHN-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** `chain_hash[i] = SHA-256( ascii(prev_hex[i]) ‖ ascii(canonical_hash_hex[i]) )`
   where `‖` is TEXTUAL hex-string concatenation.
-- **Bound to decision:** P-004.
-- **Evidence:** `sha256Hex(prev + canonical_hash)` in JS; equivalent in
-  Python.
-- **Blocking gap:** Textual vs binary is not currently stated normatively.
+- **Blocking:** P-004 (textual vs binary explicit).
 
-### AURA-INV-CHN-2 (candidate)
-- **Statement:** `prev_hash[0]` MUST equal the 64-character ASCII string
-  `"0"` × 64 (i.e. 64 × `0x30`).
-- **Bound to decision:** P-005.
+### AURA-INV-CHN-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Genesis anchor `prev_hash[0]` = 64-character ASCII
+  string `"0"` × 64 (i.e. 64 × `0x30`).
+- **Blocking:** P-004 (genesis is part of chain semantics under the
+  canonical mapping).
 
-### AURA-INV-CHN-3 (candidate)
-- **Statement:** For `i > 0`, `prev_hash[i]` MUST equal the RE-DERIVED
-  `chain_hash[i-1]` (cascade semantics).
-- **Bound to decision:** P-016 (discovered).
-- **Evidence:** `verifySession` uses `prev = r.recomputedChain`.
+### AURA-INV-CHN-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Predecessor semantics: for `i > 0`, `prev_hash[i]`
+  equals the RE-DERIVED `chain_hash[i-1]` (cascade).
+- **Blocking:** P-004 + P-010 (which value is authoritative).
 
-### AURA-INV-CHN-4 (candidate)
-- **Statement:** Any mutation of `payload[k]` MUST cause failure of
-  `hash_chain_continuity` for every `i ≥ k`.
-- **Bound to decision:** P-004 + P-016.
-- **Evidence:** Emergent from CHN-1 + CHN-3.
+### AURA-INV-CHN-4 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Any mutation of any record's payload propagates: every
+  subsequent record's chain check MUST fail.
+- **Blocking:** P-004 + P-010.
 
-## Category POL — Policy
+## P-005 · Bundle envelope
 
-### AURA-INV-POL-1 (candidate)
-- **Statement:** `decision.policy_version` MUST be a member of
+### AURA-INV-ENV-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Bundle envelope MUST contain `bundle_version` and a
+  `session` object; `session` MUST contain a non-empty
+  `decisions` array and `registered_policy_versions`.
+- **Blocking:** P-005.
+
+### AURA-INV-ENV-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Every decision record MUST carry a non-empty `id`.
+- **Blocking:** P-005.
+
+### AURA-INV-ENV-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Presence of the top-level `attestation` block is
+  OPTIONAL (v1) or REQUIRED (v2+) — decision open.
+- **Blocking:** P-005 (+ CANDIDATE P-013).
+
+## P-006 · Optional / unknown fields
+
+### AURA-INV-EXT-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Unknown-key policy MUST be normatively fixed (open,
+  closed, or `x-` prefixed).
+- **Blocking:** P-006.
+
+### AURA-INV-EXT-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Unknown keys inside a decision object DO participate
+  in canonicalization (they change the canonical bytes), consistent with
+  P-001.
+- **Blocking:** P-006 + P-001.
+
+## P-007 · Policy binding
+
+### AURA-INV-POL-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** `decision.policy_version` MUST be a member of
   `session.registered_policy_versions` under a normatively-defined
-  comparator (identity, semver, or content-hash — pending P-015).
-- **Bound to decision:** P-015 (discovered).
-- **Evidence:** `expectedPolicyVersions.has(...)` in JS, `in registered`
-  in Python.
+  comparator.
+- **Evidence:** `checkPolicyBinding`.
+- **Blocking:** P-007 (comparator identity vs semver vs content-hash).
 
-## Category TMP — Tamper detection
+### AURA-INV-POL-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Policy identifier case sensitivity and whitespace
+  normalisation MUST be fixed.
+- **Blocking:** P-007.
 
-### AURA-INV-TMP-1 (candidate)
-- **Statement:** A conforming verifier MUST provide a runtime probe that
-  applies a deterministic mutation to an *isolated* clone of any record
-  and confirms that the real verifier flags at least `canonical_representation`
-  and `sha256_integrity` as FAIL.
-- **Bound to decision:** P-010.
-- **Evidence:** `tamperProbe` (JS) and `tamper_probe` (Python).
+### AURA-INV-POL-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Optional binding to a policy content hash may be
+  standardised (Option C of P-007).
+- **Blocking:** P-007.
 
-## Category POR — Portability
+## P-008 · Verification result semantics
 
-### AURA-INV-POR-1 (candidate)
-- **Statement:** Any bundle produced by a conforming producer MUST be
-  verifiable by every conforming verifier, without mutation of the bundle
-  file.
-- **Bound to decision:** P-011, P-012.
-- **Evidence:** Node CLI + Python CLI verify same file byte-for-byte.
+### AURA-INV-REP-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Result statuses are the closed set
+  `{PASS, FAIL, NOT_IMPLEMENTED, NOT_APPLICABLE}`.
+- **Blocking:** P-008.
 
-## Category XIM — Cross-implementation
+### AURA-INV-REP-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Overall verdict is FAIL if any test is FAIL; else PASS
+  if every test is in `{PASS, NOT_IMPLEMENTED, NOT_APPLICABLE}`; else
+  FAIL.
+- **Evidence:** `runConformanceSuite` (Node) and `run_suite` (Python).
+- **Blocking:** P-008 (Owner may prefer NI → FAIL).
 
-### AURA-INV-XIM-1 (candidate)
-- **Statement:** Two independently-implemented verifiers, given the same
-  bundle, MUST produce identical `status` for every common non-
-  `impl:cross-implementation` test id.
-- **Bound to decision:** P-011.
-- **Evidence:** `agreementFrom` in `aura-verify.mjs`.
+### AURA-INV-REP-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Runtime tamper-detection probe requirement: a
+  conforming verifier MUST provide a runtime probe that mutates an
+  isolated clone of any record and confirms that the real verifier
+  flags at least `canonical_representation` and `sha256_integrity` as
+  FAIL. (Currently `INV-TMP-01`.)
+- **Blocking:** P-008 (probe is a REP obligation) + editorial.
 
-### AURA-INV-XIM-2 (candidate)
-- **Statement:** Implementations MUST report `binding_matrix_version`,
-  and cross-impl comparison MUST include a matrix-version compatibility
-  check (equal, or one is a compatible superset per a decision-defined
-  rule).
-- **Bound to decision:** P-009.
-- **Blocking gap:** Current implementations report different values
-  (`1.3` vs `1.2`).
+### AURA-INV-REP-4 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Empty-bundle report shape is normatively fixed.
+- **Blocking:** P-008 + P-011.
 
-## Category ATT — Attestation (candidate P-013)
+## P-009 · Versioning
 
-### AURA-INV-ATT-1 (candidate)
-- **Statement:** Attestation, if present, MUST be an Ed25519 signature
-  (RFC 8032) over UTF-8(canonical(payload)) with `payload` shape as
-  frozen by the spec (currently 10 fields — see INV_ATT_01 doc).
-- **Bound to decision:** P-013 (discovered).
+### AURA-INV-VER-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** `bundle_version` semantics (integer vs SemVer, forward-
+  compat behaviour) is normatively fixed.
+- **Blocking:** P-009.
 
-### AURA-INV-ATT-2 (candidate)
-- **Statement:** The trusted key registry MUST be delivered out-of-band
-  and MUST NOT be embedded in the bundle.
-- **Bound to decision:** P-013.
+### AURA-INV-VER-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** `protocol_version` is reported by every verifier; the
+  value `"unspecified"` means "no normative Aura Protocol is in force".
+- **Blocking:** P-009.
 
-### AURA-INV-ATT-3 (candidate)
-- **Statement:** A revoked key MUST cause verification FAIL regardless
-  of `signed_at` (retroactive revocation).
-- **Bound to decision:** P-013.
-- **Blocking gap:** `retired` status is documented but the code only
-  checks `revoked`; either the spec MUST drop `retired` or verifiers MUST
-  enforce it.
+### AURA-INV-VER-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Whether `binding_matrix_version` is a NORMATIVE
+  protocol field or an ADVISORY implementation reporting field is an
+  Owner decision. Only under "normative" would drift constitute a FAIL.
+- **Blocking:** P-009.
 
-## Category TIME — Timestamps
+## P-010 · Evidence boundary
 
-### AURA-INV-TIME-1 (candidate)
-- **Statement:** Every timestamp on the wire MUST use a single
-  normatively-defined grammar (RFC 3339 UTC with `Z` is the recommended
-  option — see P-006).
-- **Bound to decision:** P-006.
+### AURA-INV-EB-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Verification MUST re-derive
+  `canonical_representation`, `canonical_hash`, `chain_hash` from the
+  payload and treat re-derivation as authoritative.
+- **Evidence:** Both verifiers.
+- **Blocking:** P-010.
 
-## Category VER — Versioning
+### AURA-INV-EB-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Storage of `evidence.canonical_representation` is
+  either REQUIRED, OPTIONAL, or FORBIDDEN — normatively fixed.
+- **Blocking:** P-010.
 
-### AURA-INV-VER-1 (candidate)
-- **Statement:** `bundle_version` semantics (integer vs SemVer) MUST be
-  fixed.
-- **Bound to decision:** P-012.
+### AURA-INV-EB-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Stored `prev_hash[i]` is compared against the
+  RE-DERIVED `chain_hash[i-1]` (not the stored one) — the re-derived
+  chain is the authoritative source.
+- **Blocking:** P-010 + P-004.
 
-### AURA-INV-VER-2 (candidate)
-- **Statement:** `protocol_version` MUST be reported by every verifier;
-  the value `"unspecified"` means "no normative Aura Protocol has been
-  frozen for this implementation".
-- **Bound to decision:** P-012.
+### AURA-INV-EB-4 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Evidence bundles MUST be independently verifiable
+  without mutation of the bundle file (portability).
+- **Blocking:** P-010 + P-011.
 
-## Category CLI — Verifier CLI
+## P-011 · Cross-implementation semantics
 
-### AURA-INV-CLI-1 (candidate)
-- **Statement:** Exit codes: `0 = PASS`, `1 = FAIL`, `2 = bad input`.
-- **Bound to decision:** P-010.
+### AURA-INV-XIM-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Two independent verifiers, given the same bundle, MUST
+  produce identical `status` for every common non-`impl:cross-implementation`
+  test id.
+- **Evidence:** `agreementFrom` in `aura-verify.mjs`; parity tests.
+  The Node→Python spawn mechanism is **implementation evidence**, not
+  normative.
+- **Blocking:** P-011.
+
+### AURA-INV-XIM-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Parity is defined on a normatively-frozen golden
+  bundle corpus (offline), independent of live spawning.
+- **Blocking:** P-011.
+
+### AURA-INV-XIM-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Reference implementation designation (if adopted):
+  one impl is normative; others MUST match its JSON report.
+- **Blocking:** P-011.
+
+## P-012 · Error / malformed-input semantics
+
+### AURA-INV-ERR-1 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Verifier CLI exit codes: `0 = PASS`, `1 = FAIL`,
+  `2 = malformed / bad input`.
 - **Evidence:** Both CLIs.
+- **Blocking:** P-012.
 
-### AURA-INV-CLI-2 (candidate)
-- **Statement:** When invoked with `--json`, verifier stdout MUST be a
-  single valid JSON document conforming to a normatively-defined schema
-  containing at minimum: `protocol_version`, `verifier_version`,
-  `bundle_version`, `binding_matrix_version`, `record_count`, `overall`,
-  and `tests[].{id,status}`.
-- **Bound to decision:** P-010.
+### AURA-INV-ERR-2 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Failure-code taxonomy per test is normatively fixed
+  (Option B or C of P-012).
+- **Blocking:** P-012.
 
-## Category REP — Reporting
+### AURA-INV-ERR-3 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Canonicalizer error class for non-finite / non-JSON
+  inputs is normatively fixed (currently JS generic `Error` vs Python
+  `ValueError`).
+- **Blocking:** P-012.
 
-### AURA-INV-REP-1 (candidate)
-- **Statement:** Suite `overall` MUST be `FAIL` if any `tests[].status ==
-  FAIL`; otherwise `PASS` iff every test is in the set
-  `{PASS, NOT_IMPLEMENTED, NOT_APPLICABLE}`.
-- **Bound to decision:** P-012 (some auditors may want `NOT_IMPLEMENTED`
-  to force FAIL).
-
-## Category EXT — Extensibility
-
-### AURA-INV-EXT-1 (candidate)
-- **Statement:** The specification MUST define whether unknown top-level
-  or `session.*` keys are permitted; recommended default: only keys
-  prefixed `x-` are tolerated (Option C of P-012).
-- **Bound to decision:** P-012.
+### AURA-INV-ERR-4 (CANDIDATE — OWNER REVIEW REQUIRED)
+- **Statement.** Bundle-level malformation errors (missing envelope
+  fields, wrong `bundle_version`, missing `id`) emit a structured
+  `{code, detail}` object on the exit-2 path.
+- **Blocking:** P-012.
 
 ---
 
 ## Cross-reference table
 
-| Candidate | Existing INV in repo | Decision | Ready to normalize? |
+| Candidate | Canonical domain(s) | Existing INV in repo | Status |
 |---|---|---|---|
-| AURA-INV-STR-1 | INV-STR-01 | P-012 | Partial (evidence field set could still change) |
-| AURA-INV-STR-2 | — | P-015 | No — needs P-015 |
-| AURA-INV-CAN-1 | INV-CAN-01 | P-001 | No — Unicode ordering |
-| AURA-INV-CAN-2 | INV-CAN-01 | P-001 | Yes |
-| AURA-INV-CAN-3 | INV-CAN-01 | P-001 | No |
-| AURA-INV-CAN-4 | INV-CAN-01 | P-001 | Yes |
-| AURA-INV-CAN-5 | INV-CAN-01 | P-001, P-012 | Partial |
-| AURA-INV-NUM-1 | INV-FLT-01 | P-002 | Yes for finite doubles |
-| AURA-INV-NUM-2 | INV-FLT-01 | P-002 | Yes |
-| AURA-INV-NUM-3 | — | P-002 | No |
-| AURA-INV-HASH-1 | INV-HASH-01 | P-003 | Yes |
-| AURA-INV-HASH-2 | — | P-003 | No |
-| AURA-INV-CHN-1 | INV-CHN-01 | P-004 | Partial (textual/binary unstated) |
-| AURA-INV-CHN-2 | INV-CHN-01 | P-005 | Yes |
-| AURA-INV-CHN-3 | INV-CHN-01 | P-016 | No |
-| AURA-INV-CHN-4 | INV-CHN-01 | P-004+P-016 | No |
-| AURA-INV-POL-1 | INV-POL-01 | P-015 | No |
-| AURA-INV-TMP-1 | INV-TMP-01 | P-010 | Yes |
-| AURA-INV-POR-1 | INV-POR-01 | P-011+P-012 | Yes |
-| AURA-INV-XIM-1 | INV-XIM-01 | P-011 | Yes |
-| AURA-INV-XIM-2 | — | P-009 | No |
-| AURA-INV-ATT-1 | INV-ATT-01 | P-013 | Partial |
-| AURA-INV-ATT-2 | INV-ATT-01 | P-013 | Yes |
-| AURA-INV-ATT-3 | INV-ATT-01 | P-013 | No (retired-status gap) |
-| AURA-INV-TIME-1 | — | P-006 | No |
-| AURA-INV-VER-1 | — | P-012 | No |
-| AURA-INV-VER-2 | — | P-012 | Yes |
-| AURA-INV-CLI-1 | — | P-010 | Yes |
-| AURA-INV-CLI-2 | — | P-010 | No |
-| AURA-INV-REP-1 | — | P-012 | Partial |
-| AURA-INV-EXT-1 | — | P-012 | No |
+| AURA-INV-CAN-1 | P-001 | INV-CAN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CAN-2 | P-001 | INV-CAN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CAN-3 | P-001 | INV-CAN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CAN-4 | P-001 | INV-CAN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CAN-5 | P-001 + P-010 | INV-CAN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CAN-6 | P-001 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CAN-7 | P-001 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-NUM-1 | P-002 | INV-FLT-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-NUM-2 | P-002 | INV-FLT-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-NUM-3 | P-002 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-NUM-4 | P-002 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-HASH-1 | P-003 | INV-HASH-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-HASH-2 | P-003 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CHN-1 | P-004 | INV-CHN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CHN-2 | P-004 | INV-CHN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CHN-3 | P-004 + P-010 | INV-CHN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-CHN-4 | P-004 + P-010 | INV-CHN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ENV-1 | P-005 | INV-STR-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ENV-2 | P-005 | INV-STR-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ENV-3 | P-005 + CAND. P-013 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-EXT-1 | P-006 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-EXT-2 | P-006 + P-001 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-POL-1 | P-007 | INV-POL-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-POL-2 | P-007 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-POL-3 | P-007 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-REP-1 | P-008 | (impl STATUS enum) | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-REP-2 | P-008 | `runConformanceSuite` | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-REP-3 | P-008 | INV-TMP-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-REP-4 | P-008 + P-011 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-VER-1 | P-009 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-VER-2 | P-009 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-VER-3 | P-009 | (A-012 drift) | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-EB-1 | P-010 | INV-CAN-01/HASH-01/CHN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-EB-2 | P-010 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-EB-3 | P-010 + P-004 | INV-CHN-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-EB-4 | P-010 + P-011 | INV-POR-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-XIM-1 | P-011 | INV-XIM-01 | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-XIM-2 | P-011 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-XIM-3 | P-011 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ERR-1 | P-012 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ERR-2 | P-012 | (attestation codes) | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ERR-3 | P-012 | INV-FLT-01 throw | CANDIDATE — OWNER REVIEW REQUIRED |
+| AURA-INV-ERR-4 | P-012 | — | CANDIDATE — OWNER REVIEW REQUIRED |
+
+## Cross-cutting / candidate (not P-001…P-012)
+
+- **Timestamp semantics (DISCOVERED / CROSS-CUTTING).** No candidate
+  invariant is proposed at Aura Protocol level in this pack. Timestamps
+  depend on P-001 (canonicalized payload), P-010 (evidence), and
+  CANDIDATE P-013 (attestation). The Owner may elect to promote a
+  dedicated decision; **not decided here**.
+- **CLI JSON schema (DISCOVERED).** Depends on P-011 minimum payload.
+- **CANDIDATE P-013 — Attestation governance (DEFERRED).** Ed25519,
+  key lifecycle, revocation retroactivity, `retired` status, counter-
+  signature. NOT PROMOTED to canonical catalogue. Not addressed in this
+  pack.
+- **CANDIDATE P-014 — Verifier replay / idempotency (DEFERRED).**
 
 ## Normative status
 
 **Non-normative.** No candidate above is a rule until the Owner adopts
 it. Renamings such as `AURA-INV-*` are provisional and MUST NOT be
 propagated into code, tests, or `binding_matrix.json` before decision.
+No prior "Ready to normalize" language survives this correction — every
+row is **CANDIDATE — OWNER REVIEW REQUIRED**.

@@ -35,15 +35,12 @@ Transform the demonstrator into a **Conformance & Evidence Console** for the Aur
 - Session state is in-memory only; no authentication.
 
 ## Phase 3 — Architecture Pack (done, 2026-02-02, analysis only, no code changes)
-- Delivered six documentation-only artifacts under `/app/docs/`:
-  - `PHASE_3_SEMANTIC_INVENTORY.md` — 16 files inspected, semantic surfaces enumerated with FACT / TESTED / ASSUMPTION / AMBIGUITY tags.
-  - `PHASE_3_PROTOCOL_DECISION_MATRIX.md` — 12 canonical Owner decisions P-001 … P-012 (question → options → RECOMMENDATION ONLY → OWNER DECISION REQUIRED).
-  - `PHASE_3_AMBIGUITY_REGISTER.md` — 23 rows (16 canonical A-001…A-016 + 7 discovered A-101…A-107).
-  - `PHASE_3_GOLDEN_VECTOR_PLAN.md` — golden-vector categories, coverage gaps, BLOCKED BY DECISION P-XXX markers.
-  - `PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md` — 30 candidate `AURA-INV-*` invariants across 15 categories.
-  - `PHASE_3_ARCHITECTURE_PACK.md` — final combined report with sequencing recommendations.
-- Discovered additional candidate domains (NOT promoted into canonical catalogue): P-013 attestation governance, P-014 replay/idempotency, P-015 policy comparator, P-016 cascade source, P-017 envelope openness.
-- Confirmed no production code was changed (verified via `git status --short`: only `docs/PHASE_3_*.md` files added).
+- Delivered six documentation-only artifacts under `/app/docs/` (`PHASE_3_SEMANTIC_INVENTORY.md`, `PHASE_3_PROTOCOL_DECISION_MATRIX.md`, `PHASE_3_AMBIGUITY_REGISTER.md`, `PHASE_3_GOLDEN_VECTOR_PLAN.md`, `PHASE_3_PROTOCOL_INVARIANT_CANDIDATES.md`, `PHASE_3_ARCHITECTURE_PACK.md`).
+- **Governance correction applied (same day).** Canonical Phase 3 decision taxonomy restored across every document:
+  P-001 Canonicalization · P-002 Numeric serialization · P-003 Hash domain · P-004 Chain semantics · P-005 Bundle envelope · P-006 Optional/unknown fields · P-007 Policy binding · P-008 Verification result semantics · P-009 Versioning · P-010 Evidence boundary · P-011 Cross-implementation semantics · P-012 Error/malformed-input semantics.
+- 24 ambiguities (20 mapped to canonical P-IDs + 2 cross-cutting + 2 candidate P-013/P-014 DEFERRED). 43 candidate `AURA-INV-*` invariants, all marked **CANDIDATE — OWNER REVIEW REQUIRED**.
+- Retired candidate IDs P-015/P-016/P-017 (their content is fully covered by canonical P-007, P-004+P-010, and P-005+P-006 respectively). CANDIDATE P-013 (attestation), P-014 (replay), and timestamp semantics remain DISCOVERED / DEFERRED and NOT promoted into the canonical catalogue.
+- Confirmed no production code was changed (`git status --short` shows only `docs/PHASE_3_*.md` modified; `frontend/src`, `frontend/tests`, `cli/*.mjs`, `py_verifier`, `config` have zero diff).
 - Cross-file consistency check flagged one drift: `BINDING_MATRIX_VERSION` = `1.3` in JS vs `1.2` hard-coded in `aura_verify.py` (recorded as A-012, blocked by P-009).
 
 ## Roadmap / next tasks

@@ -1,12 +1,29 @@
 # PHASE 3 — SEMANTIC INVENTORY
 
-**Status:** ANALYSIS ARTIFACT · NON-NORMATIVE · READ-ONLY
+**Status:** ANALYSIS ARTIFACT · NON-NORMATIVE · READ-ONLY · P-ID TAXONOMY CORRECTED
 **protocol_version:** `unspecified`
-**Source of truth:** current implementation code as of this analysis. No code was changed to produce this document.
 
-This inventory enumerates every semantic surface an Aura verifier currently
-depends on — the raw material the Protocol Owner needs to make normative
-decisions before the Aura Protocol can be frozen.
+Enumerates every semantic surface an Aura verifier currently depends on,
+tagged and cross-referenced to the **canonical Phase 3 decision
+catalogue** (P-001 … P-012). No source code, test, or configuration was
+modified to produce this document.
+
+## Canonical mapping (authoritative)
+
+| ID | Domain |
+|---|---|
+| P-001 | Canonicalization |
+| P-002 | Numeric serialization |
+| P-003 | Hash domain |
+| P-004 | Chain semantics |
+| P-005 | Bundle envelope |
+| P-006 | Optional / unknown fields |
+| P-007 | Policy binding |
+| P-008 | Verification result semantics |
+| P-009 | Versioning |
+| P-010 | Evidence boundary |
+| P-011 | Cross-implementation semantics |
+| P-012 | Error / malformed-input semantics |
 
 Every row is tagged with one of:
 
@@ -15,8 +32,8 @@ Every row is tagged with one of:
 | **FACT** | Implementation fact directly observed in source. |
 | **TESTED** | Behavior asserted by a test in this repository. |
 | **ASSUMPTION** | Implementation assumption the code depends on but does not state normatively. |
-| **AMBIGUITY** | Behavior is currently under-specified; another conforming implementation could legally diverge. |
-| **INV-CANDIDATE** | Architectural invariant candidate for the future normative spec. |
+| **AMBIGUITY** | Behavior is currently under-specified. |
+| **INV-CANDIDATE** | Architectural invariant candidate (see companion Invariant Candidates doc). |
 | **OWNER-DECISION** | Requires a normative decision by the Protocol Owner. |
 
 ---
@@ -44,145 +61,181 @@ Every row is tagged with one of:
 
 ## 2. Code paths traced
 
-- **Verification (Node):** `aura-verify.mjs → runConformanceSuite → verifySession → verifyDecision → canonicalize + sha256Hex`, then cross-impl spawn to `py_verifier/aura_verify.py`.
-- **Verification (Python):** `aura_verify.main → validate_bundle → run_suite → verify_decision → canonicalize + sha256_hex`, and `check_attestation → verify_attestation → ed25519_ref.verify`.
-- **Signing (Node CLI):** `aura-sign.mjs → buildAttestationPayload → canonicalPayloadString → Node `crypto.sign(null, …, ed25519PrivateKey)` → attach `attestation` block`.
+- **Verification (Node):** `aura-verify.mjs → runConformanceSuite → verifySession → verifyDecision → canonicalize + sha256Hex`; then cross-impl spawn to `py_verifier/aura_verify.py`.
+- **Verification (Python):** `aura_verify.main → validate_bundle → run_suite → verify_decision → canonicalize + sha256_hex`; `check_attestation → verify_attestation → ed25519_ref.verify`.
+- **Signing (Node CLI):** `aura-sign.mjs → buildAttestationPayload → canonicalPayloadString → Node crypto.sign(null, …, ed25519PrivateKey)` → attach `attestation` block.
 - **Chain re-derivation for attestation:** `attestation.js#deriveFinalChainHash → verifySession → recomputedChain` (uses *re-derived* chain, not stored `chain_hash`).
 - **Tamper probe:** `conformanceCore.tamperProbe → deep clone → mutate `.reason` → verifyDecision on clone → expect `canonical_representation:false && sha256_integrity:false`.
 
 ## 3. Semantic surfaces (canonical enumeration)
 
-### 3.1 Bundle envelope
+### 3.1 Bundle envelope (P-005)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| `bundle_version === 1` accepted by both verifiers. | `exportBundle.js`, `aura-verify.mjs#validateBundle`, `aura_verify.py#validate_bundle` | FACT / TESTED | Any other value is rejected with exit 2. |
+| `bundle_version === 1` accepted by both verifiers. | `exportBundle.js`, `aura-verify.mjs#validateBundle`, `aura_verify.py#validate_bundle` | FACT / TESTED | Any other value → exit 2. |
 | `exported_at`, `source`, `note` fields carried in envelope. | `exportBundle.js` | FACT | Not part of verification. |
-| `session` is a passthrough of the imported session shape (extra keys tolerated). | `exportBundle.js`, `BUNDLE_SCHEMA.md` | FACT | Extra top-level `session` fields are neither validated nor forbidden. |
-| Are unknown `session.*` keys legal? Are they part of canonicalization? | — | AMBIGUITY | Currently unknown keys DO participate in canonicalization of decisions only if they live inside the decision object; envelope fields are not canonicalized because the payload = decision minus `evidence`. |
+| `session` is a passthrough of the imported session shape. | `exportBundle.js`, `BUNDLE_SCHEMA.md` | FACT | Extra top-level `session` fields tolerated (see §3.2 / P-006). |
+| Envelope required-field list in `BUNDLE_SCHEMA.md` (`note`, `exported_at`, `source`) is not enforced by the verifiers. | Both CLIs | ASSUMPTION | Documented as "yes" but verifier only enforces `bundle_version`, `session`, `session.decisions`. |
+| Top-level `attestation` block is OPTIONAL. | Both verifiers | FACT | Absent → `impl:attestation-signature = NOT APPLICABLE`. |
+| **Blocking decision:** **P-005**. |  |  |  |
 
-### 3.2 Decision payload (canonicalized subject)
-
-| Surface | Location | Tag | Note |
-|---|---|---|---|
-| Payload = `{...decision}` minus the `evidence` key. | `verification.js#decisionPayload`, `aura_verify.py#_payload` | FACT | Exact set of *other* keys is not fixed by a schema. |
-| Any set of extra keys inside `decision` is canonicalized as-is. | `verification.js#canonicalize`, `aura_verify.py#canonicalize` | FACT | Extensibility is de-facto open. |
-| No schema forbids unknown keys (only `id` + `evidence` are required). | `BUNDLE_SCHEMA.md` | AMBIGUITY | Open-world vs closed-world extension is undefined. |
-
-### 3.3 Canonicalization
+### 3.2 Optional / unknown fields (P-006)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| Object keys are sorted **lexicographically by JS `String#sort`** and Python `sorted(keys)`. | `verification.js` / `aura_verify.py` | FACT | Both use codepoint order for ASCII keys; behavior for non-ASCII keys is claimed equal but not tested. |
-| Arrays preserved in-order. | Both | FACT / TESTED | Order is treated as semantic. |
-| No whitespace. | Both | FACT | JCS-lite. |
-| Strings encoded via `JSON.stringify` (JS) and `json.dumps(v, ensure_ascii=False)` (Python). | `verification.js`, `aura_verify.py` | FACT | Both produce `\uXXXX` for controls; both leave non-ASCII chars raw. This is **assumed equivalent**; escape-set equality across Unicode has **not** been proven byte-for-byte in tests. |
-| `null` → `"null"`; booleans → `"true"/"false"`. | Both | FACT | |
-| Numbers → INV-FLT-01 (see §3.4). | `canonicalNumber.js`, `aura_verify.py#_js_number_to_string` | FACT / TESTED | 14 reference vectors. |
-| Only JSON-scalar / array / object types accepted; anything else throws. | Both | FACT | JS throws for `undefined`, symbols; Python throws for non-JSON types. |
-| Are integer JSON tokens vs JS `number` conflated? | `verification.js` treats all numbers via `canonicalNumberString`; Python differentiates `int` (str(n)) vs `float`. | ASSUMPTION | For values ≤ MAX_SAFE_INTEGER the two paths coincide; larger `int` in Python is not exercised. |
-| Are keys allowed to contain U+0000 or unpaired surrogates? | Neither implementation guards. | AMBIGUITY | RFC 8785 would restrict; current impl relies on `JSON.stringify` / `json.dumps` defaults, which differ on surrogates. |
+| Extra top-level bundle keys silently tolerated. | Both verifiers | FACT | Not part of verification. |
+| Extra `session.*` keys silently tolerated. | Both verifiers | FACT | Not part of verification. |
+| Extra keys inside a decision **participate in canonicalization** (they change `canonical_representation`). | Both canonicalizers | FACT | Emergent extension surface. |
+| **Blocking decision:** **P-006** (and P-001 for the "participate in canonicalization" branch). |  |  |  |
 
-### 3.4 Numeric canonicalization (INV-FLT-01)
+### 3.3 Canonicalization (P-001)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| Rule = ECMAScript §6.1.6.1.13 `Number::toString`. | `INV_FLT_01_...md`, `canonicalNumber.js`, `_js_number_to_string` | FACT | |
-| `NaN` / `±Infinity` REJECTED. | Both | FACT / TESTED | Diverges from `JSON.stringify` default (which emits `null`). |
+| Object keys sorted by JS `Object.keys().sort()` / Python `sorted(keys)`. | `verification.js`, `aura_verify.py` | FACT | Agrees on BMP ASCII; not proven on non-BMP. |
+| Arrays preserved in-order. | Both | FACT / TESTED | Order is semantic. |
+| No whitespace between tokens. | Both | FACT | |
+| Strings via `JSON.stringify` / `json.dumps(..., ensure_ascii=False)`. | Both | FACT | Escape agreement not proven byte-for-byte on U+2028/2029, unpaired surrogates. |
+| `null` → `"null"`, booleans → `"true"/"false"`. | Both | FACT | |
+| Numbers via P-002 rule. | See §3.4. | FACT | |
+| Payload for canonicalization = decision minus `evidence`. | `verification.js#decisionPayload`, `aura_verify.py#_payload` | FACT | Cross-references P-010 (evidence boundary). |
+| Duplicate JSON input keys are invisible to canonicalization. | Both | ASSUMPTION | `JSON.parse` / `json.loads` resolve upstream. |
+| **Blocking decision:** **P-001**. |  |  |  |
+
+### 3.4 Numeric canonicalization (P-002)
+
+| Surface | Location | Tag | Note |
+|---|---|---|---|
+| Rule = ECMAScript §6.1.6.1.13 `Number::toString` (INV-FLT-01). | `canonicalNumber.js`, `aura_verify.py#_js_number_to_string` | FACT | |
+| Non-finite REJECTED. | Both | FACT / TESTED | Diverges from `JSON.stringify` default. |
 | `-0` → `"0"`. | Both | FACT / TESTED | |
-| Cross-impl vectors tested. | `numericCanonicalization.test.mjs`, `test_numeric_canonicalization.py` | TESTED | 14 vectors only. |
-| Vectors do not cover: subnormals, ±smallest normal, 2^53±1, IEEE-754 boundary transitions, e-notation crossover interior (e.g. 9.999e20). | — | AMBIGUITY | Coverage gap; a conforming re-implementation could diverge on untested values. |
+| 14 reference vectors cross-checked. | `numericCanonicalization.test.mjs`, `test_numeric_canonicalization.py` | TESTED | See coverage gaps below. |
+| No coverage for subnormals, 2^53 boundary, e-notation interior crossovers. | — | AMBIGUITY | |
+| Python `int` path (`str(n)`) allows arbitrary precision; JS `Number` cannot. | `aura_verify.py#canonicalize` | ASSUMPTION | Producer-side risk. |
+| **Blocking decision:** **P-002**. |  |  |  |
 
-### 3.5 Hashing
-
-| Surface | Location | Tag | Note |
-|---|---|---|---|
-| Algorithm: `SHA-256` over UTF-8 bytes of the canonical string. | `verification.js#sha256Hex`, `aura_verify.py#sha256_hex` | FACT | |
-| Digest encoding: **lowercase hex** without separators. | JS: `padStart(2,"0")`; Python: `hashlib.sha256().hexdigest()` (lowercase). | FACT | Uppercase or base64 would fail. Not asserted in a fixture. |
-
-### 3.6 Hash chain
+### 3.5 Hash domain (P-003)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| `chain_hash[i] = sha256Hex(prev[i] ‖ canonical_hash[i])` where `‖` is **string concatenation of hex strings**. | Both | FACT | Not raw-byte concatenation. |
-| `prev[0] = "0" × 64` (64 ASCII zeros). | Both | FACT / TESTED | |
-| Verifier uses **re-derived** previous `chain_hash` as the expected `prev` for the next record (cascade semantics). | `verification.js#verifySession`: `prev = r.recomputedChain`. Python mirrors. | FACT / TESTED | Chosen so any mutation cascades. |
-| Behavior when a record's stored `prev_hash` disagrees with the previous *stored* `chain_hash` but agrees with the *re-derived* one (or vice-versa) is not enumerated as a distinct case. | — | AMBIGUITY | Cascade behavior is emergent, not stated. |
+| Algorithm: SHA-256 over UTF-8 bytes of canonical string. | `sha256Hex`, `sha256_hex` | FACT | |
+| Digest encoding: lowercase hex, no separators. | JS `padStart(2,"0")`, Python `hexdigest()` | FACT | Not asserted by fixture. |
+| No wire-level `hash_algorithm` field. | Envelope | FACT | Migration would require version bump. |
+| **Blocking decision:** **P-003**. |  |  |  |
 
-### 3.7 Policy binding
+### 3.6 Chain semantics (P-004)
+
+| Surface | Location | Tag | Note |
+|---|---|---|---|
+| `chain_hash[i] = SHA-256( ascii(prev_hex[i]) ‖ ascii(canonical_hash_hex[i]) )`. | Both | FACT | **Textual** hex-string concatenation. |
+| Genesis anchor `prev_hash[0]` = 64 ASCII `"0"`. | Both | FACT / TESTED | Part of chain semantics (no separate canonical P-ID for genesis). |
+| Verifier uses **re-derived** `chain_hash[i-1]` as expected `prev[i]` — cascade. | `verifySession` (JS); `run_suite` (Python) | FACT / TESTED | Cross-references P-010. |
+| Mutation of any record cascades to every subsequent record. | Emergent | ASSUMPTION | Not enumerated as a test vector. |
+| Textual vs raw-byte concatenation not stated normatively. | Docs | AMBIGUITY | |
+| **Blocking decision:** **P-004** (with P-010 for stored-vs-re-derived). |  |  |  |
+
+### 3.7 Policy binding (P-007)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
 | `decision.policy_version` MUST be truthy AND ∈ `session.registered_policy_versions`. | Both | FACT / TESTED | |
-| Case sensitivity, whitespace normalisation, ordering, and semantic-version compatibility are NOT defined. | — | AMBIGUITY | Match is strict `===` / `in`. |
-| No mechanism to bind a decision to a *content hash* of the policy, only its identifier. | — | AMBIGUITY | Trust the identifier alone. |
+| Comparator = strict identity (`===` / `in`). | Both | FACT | No semver / normalisation. |
+| No content-hash binding of policy body. | — | AMBIGUITY | |
+| **Blocking decision:** **P-007**. |  |  |  |
 
-### 3.8 Attestation
-
-| Surface | Location | Tag | Note |
-|---|---|---|---|
-| Algorithm: Ed25519 (RFC 8032). | `attestation.js`, `ed25519_ref.py`, `INV_ATT_01...md` | FACT | |
-| Canonical signed payload has the exact 10 fields listed in `INV_ATT_01_...md` §"Canonical signed payload". | `attestation.js#buildAttestationPayload`, `aura_verify.py#_build_attestation_payload` | FACT | |
-| `registered_policy_versions` inside the signed payload is **lex-sorted**. | Same. | FACT | Comparator = default `Array.prototype.sort` (JS) / `sorted()` (Python). Byte-identity across implementations is assumed. |
-| `final_chain_hash` uses the **re-derived** chain, not the stored one. | `deriveFinalChainHash → verifySession`. | FACT | Ties attestation to re-derived truth. |
-| Trusted registry is out-of-band (never inside the bundle). | `signingKeys.js`, `/app/config/signing_keys.json` | FACT | JS mirrors JSON file. |
-| Revocation is **retroactive** in v1. | `INV_ATT_01_...md` §Lifecycle rules item 2. | FACT | Documented but marked as "conservative default; future spec MAY split revocation from retirement". |
-| Signature is over **UTF-8(signed_payload)** — i.e. the string, not a re-canonicalization. | `attestation.js#signAttestation`, `verify_attestation` | FACT | The signer's canonicalization becomes the source of truth on the wire. |
-| Are timestamps required strictly RFC 3339 with `Z`? | JS uses `Date.parse` (permissive); Python uses `datetime.fromisoformat` with a `Z→+00:00` shim. | ASSUMPTION | Both accept broader ISO-8601. |
-| Attestation status codes: `unsupported_version`, `unsupported_algorithm`, `malformed_attestation`, `unknown_key`, `revoked_key`, `algorithm_mismatch`, `bad_timestamp`, `out_of_window`, `payload_mismatch`, `verify_error`, `bad_signature`. | `attestation.js`, `aura_verify.py` | FACT | Ordering of code checks (short-circuit sequence) is currently identical across impls. |
-| No key-rollover / retired-status test path present. | — | AMBIGUITY | `retired` status is described in doc but not enforced by either verifier's code (Python code only checks `revoked`; JS code only checks `revoked`). |
-
-### 3.9 Cross-implementation check (INV-XIM-01)
+### 3.8 Verification result semantics (P-008)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| Node CLI spawns Python with the same bundle path (`spawnSync`). | `aura-verify.mjs#runCrossImpl` | FACT | |
-| Agreement = per-test-status equality on **common ids** minus `impl:cross-implementation` itself. | `aura-verify.mjs#agreementFrom` | FACT | |
-| Absent second implementation → `NOT APPLICABLE` (not FAIL). | Both | FACT / TESTED | |
-| Python side ALWAYS emits `impl:cross-implementation = NOT IMPLEMENTED`. | `aura_verify.py#run_suite` tests table | FACT | Cross-impl is one-directional in-runtime (Node calls Python, never inverse). |
-| `binding_matrix_version` value differs: JS reports `"1.3"`, Python hard-codes `"1.2"`. | `bindingMatrix.js`, `aura_verify.py` | AMBIGUITY | Documented as ambiguity in Register (P-009). |
+| Statuses: `PASS`, `FAIL`, `NOT IMPLEMENTED`, `NOT APPLICABLE`. | `conformanceCore.STATUS`, `aura_verify.py` | FACT | |
+| Overall = FAIL if any FAIL; else PASS if every test ∈ {PASS, NI, NA}; else FAIL. | `runConformanceSuite`, `run_suite` | FACT / TESTED | |
+| Empty-bundle short-circuit: Node emits ONE test (`impl:evidence-structure = FAIL`); Python emits FULL 10-test table. | Both | AMBIGUITY | Cross-impl mismatch. |
+| Runtime tamper-detection probe (INV-TMP-01) provides evidence that the verifier actually detects mutation. | `tamperProbe`, `tamper_probe` | FACT / TESTED | |
+| Whether `NOT IMPLEMENTED` should fold to FAIL in overall is unresolved. | Docs | AMBIGUITY | |
+| **Blocking decision:** **P-008**. |  |  |  |
 
-### 3.10 CLI contract & error semantics
-
-| Surface | Location | Tag | Note |
-|---|---|---|---|
-| Exit codes: `0 PASS · 1 FAIL · 2 bad input`. | `aura-verify.mjs#usage`, `aura_verify.py#main` | FACT / TESTED | Documented identically. |
-| `--json` flag emits JSON suite to stdout; human form otherwise. | Both CLIs | FACT | JSON schema is implicit (no schema document). |
-| Python `--json` output omits per-test `label`, `message`, `invariant_id`, `requirement_ids`; Node output includes them. | `aura_verify.py#run_suite` vs `conformanceCore.js#annotate` | AMBIGUITY | Cross-impl comparator only compares `id` + `status`. |
-
-### 3.11 Reporting / suite shape
+### 3.9 Versioning (P-009)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| Statuses: `PASS`, `FAIL`, `NOT IMPLEMENTED`, `NOT APPLICABLE`. | `conformanceCore.js#STATUS`, `aura_verify.py` | FACT | |
-| Overall = FAIL if any FAIL; else PASS if every test is one of {PASS, NOT IMPLEMENTED, NOT APPLICABLE}; else FAIL. | `conformanceCore.js#runConformanceSuite` | FACT | |
-| Empty bundle short-circuit: emit only `impl:evidence-structure = FAIL`. | `conformanceCore.js` | FACT / TESTED | |
-| Meta fields: `protocol_version`, `verifier_version`, `bundle_version`, `binding_matrix_version`, `record_count`. | Both suites | FACT | JS also includes `run_at`. |
+| `PROTOCOL_VERSION = "unspecified"` in both impls. | `conformanceCore.js`, `aura_verify.py` | FACT | |
+| `BUNDLE_VERSION = 1`. | Both | FACT | Integer, no SemVer. |
+| `verifier_version` per impl: `aura-guard-conformance-core/0.3.0`, `aura-verify-py/0.3.0`. | Both | FACT | |
+| `binding_matrix_version`: JS `"1.3"` vs Python hard-coded `"1.2"`. | `bindingMatrix.js`, `aura_verify.py` | AMBIGUITY | Governance sub-question — whether the matrix version is a normative field is itself Owner-decision. |
+| **Blocking decision:** **P-009**. |  |  |  |
 
-### 3.12 Attestation signer (write-side)
+### 3.10 Evidence boundary (P-010)
 
 | Surface | Location | Tag | Note |
 |---|---|---|---|
-| `aura-sign.mjs` mutates the bundle file by attaching `attestation`. | `aura-sign.mjs` writeFileSync | FACT | No pre-existing `attestation` check; will silently overwrite. |
-| PKCS8 wrapping of raw 32-byte seed for Node `createPrivateKey`. | Same. | FACT | Constant OID prefix `302e020100300506032b657004220420`. |
-| Signed payload string used verbatim as `signed_payload` (verifier does not re-canonicalize the *received* string; it re-canonicalizes from bundle and compares bytes). | Same. | FACT | Intentional: canonicalizer bugs in the signer would be caught by verifier. |
+| Verifier RE-DERIVES `canonical`, `canonical_hash`, `chain_hash` from payload and compares to stored evidence. | `verifyDecision`, `verify_decision` | FACT / TESTED | Re-derivation is authoritative. |
+| Stored `evidence.canonical_representation` is documented as "implementation-defined, pending normative Aura specification". | `BUNDLE_SCHEMA.md` | ASSUMPTION | Whether storage is REQUIRED / OPTIONAL / FORBIDDEN is unresolved. |
+| Stored `prev_hash[i]` is compared to the **re-derived** `chain_hash[i-1]`. | `verifySession` (JS) `prev = r.recomputedChain`; Python mirrors. | FACT | |
+| Portability: independent verifier can verify without mutating the bundle file. | Node CLI + Python CLI + `portability.test.mjs` | FACT / TESTED | Cross-references P-011. |
+| Attestation payload uses **re-derived** final chain hash, not stored. | `deriveFinalChainHash → verifySession` | FACT | Ties attestation to re-derived truth. |
+| **Blocking decision:** **P-010** (with P-004 on the cascade branch). |  |  |  |
 
-## 4. Discovered additional domains (candidate P-013+ — non-normative)
+### 3.11 Cross-implementation semantics (P-011)
 
-These were surfaced while inspecting code. **Not** promoted into P-001…P-012 unless the Owner elects to.
+| Surface | Location | Tag | Note |
+|---|---|---|---|
+| Node CLI spawns Python (`spawnSync`) with the same bundle file. | `aura-verify.mjs#runCrossImpl` | FACT | Implementation evidence only; not normative. |
+| Agreement = per-`(id, status)` equality on common ids minus `impl:cross-implementation`. | `aura-verify.mjs#agreementFrom` | FACT | |
+| Absent second implementation → `NOT APPLICABLE`. | Both | FACT / TESTED | |
+| Python always emits `impl:cross-implementation = NOT IMPLEMENTED`. | `aura_verify.py#run_suite` | FACT | Direction is asymmetric. |
+| `id`-based join is fragile to rename in either impl. | — | AMBIGUITY | |
+| **Blocking decision:** **P-011**. |  |  |  |
 
-- **P-013 (candidate) — Attestation semantics governance.** Ed25519 pinning, key registry structure, revocation retroactivity, `retired` semantics gap (see §3.8). Currently spec'd in `INV_ATT_01_...md` but neither invariant is normative.
-- **P-014 (candidate) — Verifier state & replay/idempotency.** Does re-running the verifier on the same file MUST be a pure function? Currently it is by inspection, but not asserted.
-- **P-015 (candidate) — Policy-version semantics.** Comparison rule (identity vs semver vs content-hash) is unspecified.
-- **P-016 (candidate) — Cascade / prev-hash source semantics.** Verifier uses re-derived `chain_hash[i-1]` as expected `prev[i]`. An alternative "trust stored prev" reading is legal by the wire schema.
-- **P-017 (candidate) — Bundle envelope openness.** Extra top-level or session-level keys: ignored, forbidden, or normatively defined?
+### 3.12 Error / malformed-input semantics (P-012)
 
-## 5. What was NOT changed
+| Surface | Location | Tag | Note |
+|---|---|---|---|
+| CLI exit codes: `0 PASS · 1 FAIL · 2 bad input`. | `aura-verify.mjs`, `aura_verify.py` | FACT / TESTED | Both impls. |
+| Attestation emits closed-set codes (`unknown_key`, `revoked_key`, `algorithm_mismatch`, `unsupported_version`, `unsupported_algorithm`, `malformed_attestation`, `bad_timestamp`, `out_of_window`, `payload_mismatch`, `verify_error`, `bad_signature`). | `attestation.js`, `aura_verify.py` | FACT | Cross-impl compare only checks status, not codes. |
+| Non-attestation tests emit free-form `message`; no code. | Both | AMBIGUITY | |
+| Non-finite number rejection: JS `Error` vs Python `ValueError`; messages identical. | `canonicalNumber.js`, `aura_verify.py#_js_number_to_string` | AMBIGUITY | Different exception class. |
+| Bundle-level malformation exits 2 with plain stderr text (no structured error object). | Both CLIs | AMBIGUITY | |
+| **Blocking decision:** **P-012**. |  |  |  |
 
-- No `.js`, `.mjs`, `.py`, or JSON file under `/app/frontend/src/lib/`, `/app/cli/`, `/app/py_verifier/`, `/app/frontend/tests/`, `/app/py_verifier/tests/`, or `/app/config/` was modified.
+### 3.13 Attestation surfaces (DEFERRED / CANDIDATE P-013)
+
+Attestation is **NOT** part of P-001 … P-012 in this correction. It
+remains **DEFERRED / NON-NORMATIVE**. Facts captured here for
+completeness only; they DO NOT create canonical decisions.
+
+| Surface | Location | Tag |
+|---|---|---|
+| Algorithm: Ed25519 (RFC 8032). | `attestation.js`, `ed25519_ref.py` | FACT |
+| 10-field canonical signed payload. | `buildAttestationPayload`, `_build_attestation_payload` | FACT |
+| Trusted registry is out-of-band. | `signingKeys.js`, `/app/config/signing_keys.json` | FACT |
+| Revocation is retroactive; `retired` is documented but unenforced. | Docs + code | AMBIGUITY |
+| `aura-sign.mjs` overwrites any existing `attestation` block. | `aura-sign.mjs` | FACT |
+| Signature is verified over the RECEIVED `signed_payload` string after byte-equality check to re-derived canonical form. | `verifyAttestation`, `verify_attestation` | FACT |
+
+### 3.14 Timestamp surfaces (DISCOVERED / CROSS-CUTTING)
+
+Not assigned a canonical P-ID. Dependencies noted:
+
+| Surface | Location | Tag | Depends on |
+|---|---|---|---|
+| Verifiers parse via JS `Date.parse` (permissive) or Python `datetime.fromisoformat` with `Z→+00:00` shim. | `attestation.js`, `aura_verify.py#_iso_to_ts` | ASSUMPTION | P-001 (canonicalization of timestamp bytes inside a payload), P-010 (timestamp in evidence), CANDIDATE P-013 (attestation `signed_at`). |
+| No verifier rejects offset ≠ `Z` or missing offset. | Both | AMBIGUITY | Same. |
+
+## 4. What was NOT changed
+
+- No `.js`, `.mjs`, `.py`, or JSON file under `/app/frontend/src/lib/`,
+  `/app/cli/`, `/app/py_verifier/`, `/app/frontend/tests/`,
+  `/app/py_verifier/tests/`, or `/app/config/` was modified.
 - No new source module was added.
 - No test fixtures were added or amended.
+- `binding_matrix.json` was NOT modified even though the drift between
+  it and `aura_verify.py` (`1.3` vs `1.2`) is a real ambiguity — that
+  is now tracked as A-012 pending Owner ruling on P-009.
 
-## 6. Normative status of this document
+## 5. Normative status of this document
 
-**NON-NORMATIVE.** This inventory records *observed* implementation behavior. Any statement herein becomes normative only if adopted verbatim by the Protocol Owner and referenced from an Aura Protocol version that is no longer `"unspecified"`.
+**NON-NORMATIVE.** This inventory records *observed* implementation
+behavior. Any statement herein becomes normative only if adopted
+verbatim by the Protocol Owner and referenced from an Aura Protocol
+version that is no longer `"unspecified"`.
