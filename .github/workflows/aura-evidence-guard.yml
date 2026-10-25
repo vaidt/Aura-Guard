@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout exact source SHA
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
@@ -39,7 +39,7 @@ jobs:
           printf 'expected_source_sha=%s\nactual_checkout_sha=%s\n' "$EXPECTED_SOURCE_SHA" "$actual" >> "$GITHUB_STEP_SUMMARY"
           [[ "$actual" == "$EXPECTED_SOURCE_SHA" ]]
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
           python-version: "3.12"
       - name: Syntax compile
