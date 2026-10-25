@@ -67,7 +67,6 @@ jobs:
         env:
           AURA_SIGNING_KEYS: /app/config/signing_keys.json
           PYTHONPATH: /app/py_verifier
-          NODE_OPTIONS: --experimental-default-type=module
         run: python -m pytest -q py_verifier/tests
       - name: Record exact source SHA
         shell: bash
