@@ -1,0 +1,28 @@
+{
+  "schema": "AURA-EVIDENCE-GUARD-PR-VALIDATION-STATUS/1.0",
+  "status": "PENDING_EXACT_COMMIT_CI",
+  "local_prior_package_validation": {
+    "tests_total": 28,
+    "passed": 27,
+    "failed": 0,
+    "skipped": 1,
+    "scope": "Earlier local package build; not equivalent to the exact Git tree in this PR",
+    "native_openssh_crosscheck": "NOT_EXECUTED_LOCALLY"
+  },
+  "exact_pr_commit": {
+    "sha": "PENDING",
+    "workflow": "aura-evidence-guard",
+    "status": "NOT_RUN"
+  },
+  "networked_github_rest_audit": {
+    "status": "NOT_EXECUTED",
+    "reason": "Wait for independent PR review and merge; do not run against an unreviewed change"
+  },
+  "governance_effects": {
+    "authority": "NONE",
+    "governance": "NONE",
+    "authorization": "NONE",
+    "release": "NONE"
+  },
+  "note": "Update only by appending actual CI/run evidence bound to the exact commit SHA. Do not infer a passing result."
+}
