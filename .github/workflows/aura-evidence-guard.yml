@@ -1,0 +1,59 @@
+name: AURA Evidence Guard — offline conformance checks
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/aura-evidence-guard.yml"
+      - "tools/aura-evidence-guard/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/aura-evidence-guard.yml"
+      - "tools/aura-evidence-guard/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aura-evidence-guard-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: evidence-guard-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Assert exact source SHA
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected_source_sha=%s\nactual_checkout_sha=%s\n' "$EXPECTED_SOURCE_SHA" "$actual" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$actual" == "$EXPECTED_SOURCE_SHA" ]]
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - name: Syntax compile
+        working-directory: tools/aura-evidence-guard
+        run: python -m compileall -q aura_evidence_guard tests
+      - name: Unit tests (no GitHub API calls)
+        working-directory: tools/aura-evidence-guard
+        env:
+          PYTHONPATH: .
+        run: python -m unittest discover -s tests -v
+      - name: Record exact source SHA
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          printf 'workflow_ref=%s\nworkflow_event_sha=%s\nverified_source_sha=%s\n' "$GITHUB_REF" "$GITHUB_SHA" "$EXPECTED_SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "No networked GitHub REST audit is run by this workflow." >> "$GITHUB_STEP_SUMMARY"

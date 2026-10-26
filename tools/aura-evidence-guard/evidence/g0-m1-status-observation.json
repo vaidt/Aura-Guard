@@ -1,0 +1,41 @@
+{
+  "schema": "AURA-G0-M1-STATUS-OBSERVATION/1.0",
+  "as_of": "2026-10-25",
+  "mode": "OBSERVATIONAL_NOT_CONSTITUTIVE",
+  "G0": {
+    "status": "OPEN",
+    "gate": "BLOCKED",
+    "authority_continuity": "NOT_PROVEN"
+  },
+  "M1": {
+    "reconstruction": "EXHAUSTED",
+    "evidence_disposition": "COMPLETE",
+    "authority_continuity": "NOT_PROVEN",
+    "governance_closure": "BLOCKED",
+    "interpretation": "EXHAUSTED != RESOLVED"
+  },
+  "P008": {
+    "technical_design": "READY",
+    "technical_preparation": "COMPLETE",
+    "normative_status": "PROPOSED",
+    "ratification": "BLOCKED",
+    "implementation_authorization": "NOT_GRANTED",
+    "implementation": "BLOCKED"
+  },
+  "C6": {
+    "status": "BLOCKED_PENDING_EVIDENCE_REVIEW",
+    "contract_binding": "UNRESOLVED",
+    "expected_outcomes_assigned": false,
+    "conformance": "NOT_ESTABLISHED"
+  },
+  "L0": "PREPARED_NOT_EXECUTED",
+  "air_gap": "NOT_PROVEN",
+  "effects": {
+    "authority": "NONE",
+    "governance": "NONE",
+    "authorization": "NONE",
+    "release": "NONE"
+  },
+  "next_trigger": "NEW PRIMARY / CONSTITUTIVE EVIDENCE or a formal external act establishing missing authority",
+  "caveat": "This file records an observation. It does not close any gate or attest authority."
+}

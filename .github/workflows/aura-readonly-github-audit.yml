@@ -1,0 +1,99 @@
+name: AURA — manual read-only GitHub audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repository:
+        description: "Repository to audit (owner/name)"
+        required: true
+        default: "vaidt/aura-specification"
+        type: string
+      target_ref:
+        description: "Branch/ref name to inspect"
+        required: true
+        default: "main"
+        type: string
+      expected_head_sha:
+        description: "Optional exact 40-character commit SHA"
+        required: false
+        type: string
+      pull_request_number:
+        description: "Required PR number when auditing a workflow run"
+        required: false
+        type: string
+      workflow_run_id:
+        description: "Optional Actions run ID to audit"
+        required: false
+        type: string
+      download_artifacts:
+        description: "Download and validate artifacts from the selected run"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout reviewed main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - name: Validate inputs
+        shell: bash
+        env:
+          TARGET_REPOSITORY: ${{ inputs.target_repository }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          EXPECTED_HEAD: ${{ inputs.expected_head_sha }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+          RUN_ID: ${{ inputs.workflow_run_id }}
+        run: |
+          [[ "$TARGET_REPOSITORY" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]
+          [[ -n "$TARGET_REF" && "$TARGET_REF" != -* && "$TARGET_REF" != *$'\n'* ]]
+          [[ -z "$EXPECTED_HEAD" || "$EXPECTED_HEAD" =~ ^[0-9a-fA-F]{40}$ ]]
+          [[ -z "$PR_NUMBER" || "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ -z "$RUN_ID" || "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          if [[ -n "$RUN_ID" && -z "$PR_NUMBER" ]]; then
+            echo "FAIL: a workflow run requires a current PR head binding" >&2
+            exit 1
+          fi
+      - name: Install package for networked audit
+        working-directory: tools/aura-evidence-guard
+        run: python -m pip install --disable-pip-version-check .
+      - name: Run read-only API audit
+        working-directory: tools/aura-evidence-guard
+        env:
+          AURA_GITHUB_READ_TOKEN: ${{ secrets.AURA_GITHUB_READ_TOKEN || github.token }}
+          TARGET_REPOSITORY: ${{ inputs.target_repository }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          EXPECTED_HEAD: ${{ inputs.expected_head_sha }}
+          PR_NUMBER: ${{ inputs.pull_request_number }}
+          RUN_ID: ${{ inputs.workflow_run_id }}
+          DOWNLOAD_ARTIFACTS: ${{ inputs.download_artifacts }}
+        shell: bash
+        run: |
+          args=(audit-github --repo "$TARGET_REPOSITORY" --ref "$TARGET_REF" --output ../aura-github-audit-report.json)
+          if [[ -n "$EXPECTED_HEAD" ]]; then args+=(--expected-head "$EXPECTED_HEAD"); fi
+          if [[ -n "$PR_NUMBER" ]]; then args+=(--pr-number "$PR_NUMBER"); fi
+          if [[ -n "$RUN_ID" ]]; then args+=(--run-id "$RUN_ID"); fi
+          if [[ "$DOWNLOAD_ARTIFACTS" == "true" ]]; then args+=(--download-artifacts-to ./_audit_artifacts); fi
+          python -m aura_evidence_guard "${args[@]}"
+      - name: Upload audit report only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: aura-readonly-github-audit-report
+          path: tools/aura-github-audit-report.json
+          if-no-files-found: warn
+          retention-days: 30

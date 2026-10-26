@@ -1,0 +1,76 @@
+name: Python Reference Verifier — CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/python-reference-verifier.yml"
+      - "py_verifier/**"
+      - "cli/**"
+      - "frontend/src/lib/**"
+      - "config/signing_keys.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/python-reference-verifier.yml"
+      - "py_verifier/**"
+      - "cli/**"
+      - "frontend/src/lib/**"
+      - "config/signing_keys.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-reference-verifier-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: python-reference-verifier-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR source SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Assert exact source SHA
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected_source_sha=%s\nactual_checkout_sha=%s\n' "$EXPECTED_SOURCE_SHA" "$actual" >> "$GITHUB_STEP_SUMMARY"
+          [[ "$actual" == "$EXPECTED_SOURCE_SHA" ]]
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "24"
+      - name: Install test runner
+        run: python -m pip install --disable-pip-version-check "pytest>=8,<10"
+      - name: Provide the repository path expected by reference tests
+        shell: bash
+        run: |
+          if [[ -e /app || -L /app ]]; then
+            echo "::error::Refusing to replace existing /app path."
+            exit 1
+          fi
+          sudo ln -s "$GITHUB_WORKSPACE" /app
+          test "$(readlink -f /app)" = "$(readlink -f "$GITHUB_WORKSPACE")"
+      - name: Run Python reference-verifier test suite
+        env:
+          AURA_SIGNING_KEYS: /app/config/signing_keys.json
+          PYTHONPATH: /app/py_verifier
+        run: python -m pytest -q py_verifier/tests
+      - name: Record exact source SHA
+        shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          printf 'workflow_ref=%s\nworkflow_event_sha=%s\nverified_source_sha=%s\n' "$GITHUB_REF" "$GITHUB_SHA" "$EXPECTED_SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
