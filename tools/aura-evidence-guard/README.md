@@ -25,3 +25,11 @@ The C6 content remains `CONTRACT_UNRESOLVED`; `expected_outcomes_assigned=false`
 
 ## Governance boundary
 This package is not an authority-bearing component. The recorded statuses remain G0 `OPEN / BLOCKED`, M1 `EXHAUSTED / NOT RESOLVED`, P-008 `PROPOSED / BLOCKED`, C6 `BLOCKED_PENDING_EVIDENCE_REVIEW`, L0 `PREPARED_NOT_EXECUTED`, Air Gap `NOT_PROVEN`. Authority, governance, authorization and release effects are `NONE`. CI must never re-sign a governance record or weaken a check to force PASS.
+
+### Verification fixes
+
+`sign-evidence` does not accept `--passphrase-env`: noninteractive passphrase
+signing is unsupported; use an unlocked key or an SSH agent. Passphrases are never
+read by the CLI. Auditing a run requires a PR number and compares its current head
+with the run revision, rejects missing source SHAs, and rechecks the PR after the
+audit. Historical run 40203268967 remains mismatched, not relabelled as passing.

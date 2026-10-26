@@ -200,19 +200,31 @@ class GitHubReadOnlyClient:
         run_report = None
         artifacts_report: list[dict[str, Any]] = []
         failures: list[dict[str, Any]] = []
+        def valid_sha(value):
+            return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
+
+        if expected_head is not None and not valid_sha(expected_head):
+            failures.append({"check": "expected_head_sha_shape", "result": "FAIL"})
+        if pr_payload is not None and not valid_sha(pr_payload.get("head_sha")):
+            failures.append({"check": "pr_head_sha_shape", "result": "FAIL"})
+        if run_id is not None and pr_payload is None:
+            failures.append({"check": "workflow_run_requires_pr_binding", "result": "FAIL"})
         if not ref_match:
             failures.append({"check": "branch_head_pin", "result": "FAIL",
                              "expected": expected_head, "actual": observed_sha})
         if run_id is not None:
             run = self.workflow_run(repo, run_id)
             run_sha = run.get("head_sha")
+            if not valid_sha(run_sha):
+                failures.append({"check": "workflow_run_sha_shape", "result": "FAIL"})
             jobs = self.workflow_jobs(repo, run_id)
             artifacts = self.workflow_artifacts(repo, run_id)
             run_matches_expected = expected_head is None or (
-                isinstance(run_sha, str) and hmac.compare_digest(run_sha, expected_head)
+                valid_sha(run_sha) and valid_sha(expected_head) and hmac.compare_digest(run_sha, expected_head)
             )
             run_matches_pr = pr_payload is None or (
-                isinstance(run_sha, str) and hmac.compare_digest(run_sha, pr_payload.get("head_sha") or "")
+                valid_sha(run_sha) and valid_sha(pr_payload.get("head_sha"))
+                and hmac.compare_digest(run_sha, pr_payload["head_sha"])
             )
             if run.get("status") != "completed" or run.get("conclusion") != "success":
                 failures.append({"check": "workflow_run_success", "result": "FAIL",
@@ -259,7 +271,7 @@ class GitHubReadOnlyClient:
                     "workflow_run_head_sha": ((artifact.get("workflow_run") or {}).get("head_sha")),
                 }
                 artifact_sha = ((artifact.get("workflow_run") or {}).get("head_sha"))
-                if artifact_sha and run_sha and artifact_sha != run_sha:
+                if not valid_sha(artifact_sha) or not valid_sha(run_sha) or artifact_sha != run_sha:
                     item["binding"] = "FAIL_RUN_SHA_MISMATCH"
                     failures.append({"check": "artifact_bound_to_run_sha", "result": "FAIL",
                                      "artifact_id": artifact.get("id"), "run_sha": run_sha, "artifact_sha": artifact_sha})
@@ -276,6 +288,10 @@ class GitHubReadOnlyClient:
                                          "artifact_id": artifact.get("id"), "error": str(exc)})
                 artifacts_report.append(item)
 
+        if run_id is not None and pr_payload is not None:
+            latest_pr = self.pull_request(repo, pr_number)
+            if (latest_pr.get("head") or {}).get("sha") != pr_payload["head_sha"]:
+                failures.append({"check": "pr_head_changed_during_audit", "result": "FAIL"})
         status = "FAIL" if failures else "PASS"
         return {
             "schema": "AURA-GITHUB-READONLY-AUDIT/1.0",

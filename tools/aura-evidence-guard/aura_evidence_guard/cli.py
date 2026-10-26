@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -64,7 +63,6 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--message", required=True, type=Path)
     p.add_argument("--private-key", required=True, type=Path)
     p.add_argument("--signature-output", required=True, type=Path)
-    p.add_argument("--passphrase-env", help="Environment variable containing an encrypted OpenSSH private-key passphrase; value is never logged.")
     p.add_argument("--output", type=Path)
 
     p = subs.add_parser("verify-git-source", help="Offline exact-SHA source-lock check; never runs fetch/checkout.")
@@ -134,13 +132,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if result["cryptographic_result"] == "PASS" else 1
 
         if args.command == "sign-evidence":
-            passphrase = None
-            if args.passphrase_env:
-                value = os.environ.get(args.passphrase_env)
-                if value is None:
-                    raise SignatureError(f"passphrase_environment_variable_not_set:{args.passphrase_env}")
-                passphrase = value.encode("utf-8")
-            result = sign_evidence_sshsig(args.message, args.private_key, args.signature_output, passphrase=passphrase)
+            result = sign_evidence_sshsig(args.message, args.private_key, args.signature_output)
             _emit(result, args.output)
             return 0
 

@@ -59,6 +59,11 @@ def verify_c6_evidence_bundle(
     PASS means only that the archive and its internally bound files/metadata are intact.
     It deliberately does not assert conformance, contract ratification, authority, or release readiness.
     """
+    if expected_candidate_sha is not None and (
+        not isinstance(expected_candidate_sha, str)
+        or re.fullmatch(r"[0-9a-f]{40}", expected_candidate_sha) is None
+    ):
+        raise C6BundleError("expected_candidate_sha_must_be_40_lowercase_hex_chars")
     archive = archive.expanduser().absolute()
     if archive.is_symlink():
         raise C6BundleError("archive_must_not_be_symlink")
@@ -260,6 +265,18 @@ def verify_c6_evidence_bundle(
                 failures.append({"check": "candidate_inventory_blob_binding", "result": "FAIL",
                                  "expected": inventory_blob, "actual": actual_inventory_blob})
             parser_pins = source_lock.get("parser_source_pins", {})
+            source_commits = {
+                "ri_py_report": py_report.get("source_commit"),
+                "ri_rs_report": rs_report.get("source_commit"),
+                "ri_py_pin": parser_pins.get("ri_py_commit"),
+                "ri_rs_pin": parser_pins.get("ri_rs_commit"),
+                "integrated_harness_pin": parser_pins.get("integrated_harness_commit"),
+                "candidate_checkout": candidate_sha,
+                "candidate_origin": source_lock.get("candidate_inventory", {}).get("origin_commit"),
+            }
+            for label, commit in source_commits.items():
+                if not isinstance(commit, str) or re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+                    failures.append({"check": "source_commit_shape", "result": "FAIL", "source": label})
             if py_report.get("source_commit") != parser_pins.get("ri_py_commit"):
                 failures.append({"check": "ri_py_source_commit_cross_binding", "result": "FAIL",
                                  "report": py_report.get("source_commit"), "source_lock": parser_pins.get("ri_py_commit")})
